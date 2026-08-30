@@ -1,10 +1,10 @@
-# SparkBroadcastCG
+# SparkBroadcastCG RoV BroadcastCG overlays
 
-Broadcast character generator. Three pieces:
+Thanks to @LoongPaan for the codes and ideas and for the amazing suppport! <3
 
-- `server/` — WebSocket relay, holds what's on air. `ws://localhost:4000`
-- `control/` — operator UI. http://localhost:5173
-- `cg/` — transparent render surface for an OBS/vMix browser source. http://localhost:5174
+This program is a live-stream CG overlays during the BAN/PICK phases for Arena of Valor / RoV broadcasts systems.
+
+The operator can control a ban/pick sequence via a control page in a browser.The output page render 1920×1080 transparent overlays that OBS or vMix can used as input as Browser Sources.
 
 ## Dev
 
@@ -15,8 +15,6 @@ cd server  && npm run dev
 cd control && npm run dev
 cd cg      && npm run dev
 ```
-
-`cd server && npm test` asserts the relay on its own (it spawns the server itself).
 
 ## Protocol
 
@@ -42,28 +40,18 @@ http://192.168.1.5:5174/?relay=192.168.1.5:4000
 
 ## Assets
 
-Game content — character art, sponsor logos, anything that changes with a patch
-rather than a code change — goes in `assets/` at the project root:
+Game content and everything goes in `assets/` at the project root:
 
 ```
-assets/ban/Airi.png        72x72    pick-phase ban icon
-assets/globalban/Airi.png  72x72    global ban icon
-assets/heropick/Airi.png   138x250  pick splash art
+assets/ban/charname.png        72x72    pick-phase ban icon
+assets/globalban/charname.png  72x72    global ban icon
+assets/heropick/charname.png   138x250  pick splash art
 assets/overlayhud/hud.png  1920x1080
 assets/fonts/
 ```
 
 Served at `http://localhost:4000/assets/...`. The roster is read off disk at
-`GET /api/heroes`, so **adding a hero is a file drop** — three PNGs sharing one
-filename, no code change and no restart. `npm test` in `server/` fails if a hero
-is present in one variant folder but missing from another.
-
-It sits at the root rather than under `server/` because it belongs to the show,
-not to the relay — the server is just what serves it today.
-
-One copy, read by both pages. Drop a file in and it serves immediately, no
-rebuild. Chrome that belongs to a template instead — its own background, an
-icon, a font — goes in `cg/src/assets/` and gets bundled and hashed by Vite.
+`GET /api/heroes`
 
 ## OBS / vMix
 
