@@ -1,0 +1,493 @@
+.bezel {
+  display: flex;
+  align-items: stretch;
+  height: 64px;
+  background: linear-gradient(#181c21, #101317);
+  border-bottom: 1px solid #000;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 5%);
+}
+
+.plate {
+  display: flex;
+  align-items: center;
+  gap: 0rem;
+  padding: 0 1.15rem;
+  border-right: 1px solid var(--seam);
+  font: 700 24px/1 var(--sans);
+  letter-spacing: 0em;
+}
+
+.sections {
+  display: flex;
+}
+
+.section-key {
+  padding: 0 1.4rem;
+  font-size: 24px;
+  border: 0;
+  border-right: 1px solid var(--seam);
+  background: none;
+  color: var(--dim);
+  cursor: pointer;
+  transition: color 120ms ease;
+  letter-spacing: 0em;
+}
+
+.section-key:hover {
+  color: var(--readout);
+}
+
+.section-key.on {
+  color: var(--readout);
+  background: var(--key);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 7%),
+    inset 0 -2px 0 var(--accent);
+}
+
+/* ── Relay status ──────────────────────────────────────────────────── */
+.relay {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-left: auto;
+  padding: 0 1.25rem;
+  border-left: 1px solid var(--seam);
+  font: 400 13px/1 var(--mono);
+  letter-spacing: 0.0em;
+  color: var(--readout);
+}
+
+.lamp {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+
+.relay.down .lamp {
+  background: var(--armed);
+  animation: blink 1.4s steps(1, end) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.15;
+  }
+}
+
+/* ── Rack ──────────────────────────────────────────────────────────── */
+/* Boxes on the left, transport in the clear space beside them. */
+.control {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+
+.rack {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  max-width: 1720px;
+}
+
+/* ── Panel ─────────────────────────────────────────────────────────────
+   A module in the rack. The rail on its left edge is the tally light:
+   dark while the panel holds nothing, burning red the moment one of its
+   graphics is on air. */
+.panel {
+  display: flex;
+  background: var(--panel);
+  border: 1px solid var(--seam);
+  border-radius: 2px;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 3.5%),
+    0 1px 0 rgb(0 0 0 / 50%);
+}
+
+.rail {
+  flex: none;
+  width: 4px;
+  background: linear-gradient(90deg, #10141a, #333c46);
+}
+
+.panel.live .rail {
+  background: linear-gradient(90deg, #b31111, var(--tally));
+}
+
+.panel-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.5rem 1.1rem;
+  border-bottom: 1px solid var(--seam);
+}
+
+/* The panel's name, so you can find the module you want at a glance.
+   h2 brings its own margin, which would grow with the font size. */
+.panel-head .legend {
+  margin: 0;
+  font-size: 24px;
+  letter-spacing: 0em;
+}
+
+/* What this panel would put on air, echoed back as the operator types. */
+.panel-readout {
+  font: 400 11px/1 var(--mono);
+  letter-spacing: 0.0em;
+  color: var(--readout);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panel-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: 1.1rem;
+}
+
+/* ── Field ─────────────────────────────────────────────────────────────
+   One physical rule across the page: what you press is raised, what you
+   type into is recessed. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.panel-content input {
+  min-width: 0;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid #000;
+  border-radius: 2px;
+  background: var(--recess);
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 60%);
+  font: 500 13px/1.2 var(--mono);
+  color: var(--readout);
+}
+
+.panel-content input::placeholder {
+  color: #4a525b;
+}
+
+.field-wide {
+  flex: 0 1 26rem;
+}
+
+.field-grow {
+  flex: 1 1 12rem;
+}
+
+.field-score {
+  flex: 0 0 5rem;
+}
+
+/* Pressed, so raised — the same rule the number keys follow. */
+.panel-content select {
+  height: 34px;
+  padding: 0 0.5rem;
+  border: 1px solid #000;
+  border-radius: 2px;
+  background: var(--key);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
+  font: 500 13px/1 var(--mono);
+  color: var(--readout);
+  cursor: pointer;
+}
+
+/* ── Teams ─────────────────────────────────────────────────────────────
+   Side colour rides the top edge of the head. It is identity, not state,
+   so it stays clear of the tally rail: red on that edge means on air. */
+.teams {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.panel.blue .panel-head {
+  box-shadow: inset 0 2px 0 var(--blue);
+}
+
+.panel.red .panel-head {
+  box-shadow: inset 0 2px 0 var(--red);
+}
+
+/* One group per block of controls, each taking a full row of the panel. */
+.group {
+  display: flex;
+  flex: 1 1 100%;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.group.divided {
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--seam);
+}
+
+.row {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.picks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.bans {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.swap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.swap-arrow {
+  color: var(--dim);
+}
+
+/* Four games of five heroes each, so the row label is part of the grid. */
+.pool {
+  display: grid;
+  grid-template-columns: auto repeat(5, minmax(0, 1fr));
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.pool-label {
+  font: 400 11px/1 var(--mono);
+  color: var(--dim);
+}
+
+/* ── Output ────────────────────────────────────────────────────────────
+   The browser-source URL: a value, so recessed, with a raised key beside
+   it. Opening it and copying it are the two things anyone does here. */
+.output-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.output-url {
+  flex: 0 1 34rem;
+  overflow: hidden;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid #000;
+  border-radius: 2px;
+  background: var(--recess);
+  box-shadow: inset 0 2px 4px rgb(0 0 0 / 60%);
+  font: 500 13px/1.2 var(--mono);
+  color: var(--readout);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.output-url:hover {
+  text-decoration: underline;
+}
+
+.btn {
+  height: 34px;
+  padding: 0 1rem;
+  border: 1px solid #000;
+  border-radius: 2px;
+  background: var(--key);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
+  font: 600 11px/1 var(--sans);
+  letter-spacing: 0em;
+  text-transform: uppercase;
+  color: var(--readout);
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.btn:hover {
+  background: var(--key-lit);
+}
+
+.note {
+  font: 400 11px/1 var(--mono);
+  color: var(--dim);
+}
+
+/* ── Number keys ───────────────────────────────────────────────────────
+   A game number is one of seven, so it is a row of keys to press, not a
+   box to type in. */
+.keys {
+  display: flex;
+  gap: 4px;
+}
+
+.num-key {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #000;
+  border-radius: 2px;
+  background: var(--key);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
+  font: 500 13px/1 var(--mono);
+  color: var(--dim);
+  cursor: pointer;
+  transition:
+    background 100ms ease,
+    color 100ms ease;
+}
+
+.num-key:hover {
+  background: var(--key-lit);
+  color: var(--readout);
+}
+
+.num-key.on {
+  background: var(--key-lit);
+  color: var(--readout);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 12%),
+    inset 0 -2px 0 var(--accent);
+}
+
+/* ── Narrow ────────────────────────────────────────────────────────────
+   The bezel is one strip at desk width and stacks below it. */
+@media (max-width: 1180px) {
+  .teams {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .bezel {
+    height: auto;
+    flex-wrap: wrap;
+  }
+
+  .plate {
+    width: 100%;
+    height: 48px;
+    box-sizing: border-box;
+    border-right: 0;
+    border-bottom: 1px solid var(--seam);
+  }
+
+  .section-key {
+    padding: 1rem 1.1rem;
+  }
+
+  .relay {
+    width: 100%;
+    box-sizing: border-box;
+    margin-left: 0;
+    padding: 0.9rem 1.25rem;
+    border-top: 1px solid var(--seam);
+    border-left: 0;
+  }
+
+  .rack {
+    padding: 1rem;
+  }
+
+  .panel-head {
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+}
+
+/* ── Transport ─────────────────────────────────────────────────────────
+   The step machine, beside the board rather than under it. Sticky, because
+   the team panels are taller than the window and NEXT PHASE is pressed once
+   per phase under time pressure. Its tally rail is the real one: red means
+   the draft is on air. */
+.transport-col {
+  position: sticky;
+  top: 1.5rem;
+  flex: 0 0 24rem;
+}
+
+.step-readout {
+  font: 400 14px/1.5 var(--mono);
+  color: var(--readout);
+}
+
+/* One key does the work, so it gets the room. */
+.btn-primary {
+  width: 100%;
+  height: 84px;
+  background: var(--key-lit);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 12%),
+    inset 0 -3px 0 var(--accent);
+  font-size: 15px;
+}
+
+.transport-keys {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.transport-keys .btn {
+  height: 52px;
+  padding: 0;
+  font-size: 11px;
+}
+
+/* Destructive, so it sits apart from the routine keys rather than in the row
+   with them. The rule belongs to the divider, not to the button — on the
+   button it threw the label off centre inside its own box. */
+.transport-clear {
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--seam);
+}
+
+.btn-clear {
+  width: 100%;
+  height: 40px;
+  background: none;
+  box-shadow: none;
+  color: var(--dim);
+  font-size: 10px;
+}
+
+.btn-clear:hover {
+  color: var(--readout);
+}
+
+.btn-clear.armed {
+  color: var(--armed);
+}
+
+.btn:disabled {
+  color: var(--dim);
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* Narrow: the transport drops under the board instead of squeezing it. */
+@media (max-width: 1180px) {
+  .control {
+    flex-direction: column;
+  }
+
+  .transport-col {
+    position: static;
+    width: 100%;
+  }
+}

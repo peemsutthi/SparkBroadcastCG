@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: transparent; 
+            font-family: 'Arial', sans-serif; 
+        }
+        
+        canvas, video { 
+            width: 1920px; 
+            height: 1080px; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            z-index: 1; 
+            display: none; 
+        } 
+        
+        video { 
+            transition: opacity 0.5s ease-out; 
+            opacity: 1; 
+        }
+        
+        #text-overlays { 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 1920px; 
+            height: 1080px; 
+            z-index: 2; 
+            pointer-events: none; 
+        }
+
+        /* ========================================== */
+        /* STANDARD TEMPLATES                         */
+        /* ========================================== */
+        #template-l3_basic { 
+            display: none; 
+            position: absolute; 
+            bottom: 280px; 
+            left: 150px; 
+            padding: 10px; 
+        }
+        
+        #l3_basic_title { font-weight: bold; margin: 0; transition: all 0.2s; } 
+        #l3_basic_sub { margin: 0; transition: all 0.2s; }
+        
+        #template-l3_caster { 
+            display: none; 
+            position: absolute; 
+            bottom: 280px; 
+            left: 0; 
+            width: 100%; 
+            text-align: center; 
+            padding: 10px; 
+        } 
+        
+        #l3_caster_1 { font-weight: bold; margin-right: 300px; display: inline-block; transition: all 0.2s; } 
+        #l3_caster_2 { font-weight: bold; display: inline-block; transition: all 0.2s; }
+        
+        #countdown-overlay { 
+            display: none; position: absolute; z-index: 3; font-weight: bold; white-space: nowrap; 
+        }
+
+        /* ========================================== */
+        /* BRACKET OVERLAY                            */
+        /* ========================================== */
+        #bracket-overlay {
+            display: block; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 1920px; 
+            height: 1080px; 
+            z-index: 5;
+            opacity: 0; 
+            transform: scale(1.05);
+            pointer-events: none;
+            transition: all 0.8s ease-in-out;
+            background: rgba(0,0,0,0.85);
+        }
+        
+        #bracket-overlay.show {
+            opacity: 1;
+            transform: scale(1);
+            pointer-events: auto;
+        }
+
+        #bracket-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: url('/assets/bracket_bg.png') no-repeat center center;
+            z-index: -1;
+        }
+
+        .bracket-title {
+            position: absolute;
+            top: 40px;
+            width: 100%;
+            text-align: center;
+            font-size: 50px;
+            font-weight: bold;
+            color: #ffcc00;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            text-shadow: 0 0 20px rgba(255,204,0,0.5);
+        }
+
+        .match-box {
+            position: absolute;
+            width: 220px;
+            height: 60px;
+            background: linear-gradient(to right, #1a1a1a, #333);
+            border-left: 4px solid #555;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            font-size: 14px;
+            box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
+        }
+
+        .team-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 2px 8px; border-bottom: 1px solid #444; height: 30px; box-sizing: border-box;
+        }
+        .team-row:last-child { border-bottom: none; }
+        .team-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 160px; font-weight: bold; text-transform: uppercase; }
+        .team-score { width: 30px; height: 100%; display: flex; align-items: center; justify-content: center; background: #444; font-weight: bold; color: #00ffcc; }
+        .winner .team-name { color: #ffcc00; }
+        .winner .team-score { background: #ffcc00; color: #000; }
+
+        /* ========================================== */
+        /* DRAFT OVERLAY & ANIMATION WRAPPERS         */
+        /* ========================================== */
+        #draft-overlay {
+            display: none; 
+            position: absolute; 
+            top: 0; 
+            left: 0; 
+            width: 1920px; 
+            height: 1080px; 
+            z-index: 4;
+            opacity: 0; 
+            transform: scale(1.1);
+            pointer-events: none; 
+        }
+
+        .draft-static { opacity: 1 !important; transform: scale(1) !important; pointer-events: auto !important; }
+
+        #draft-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('/assets/draft/hud.png') no-repeat center bottom; z-index: -1; }
+
+        #draft-center-wrapper, #draft-blue-wrapper, #draft-red-wrapper {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; 
+        }
+
+        /* --- ENTRY & EXIT ANIMATIONS --- */
+        .draft-in-anim { animation: draft-zoom-fade 0.8s ease-in-out forwards; pointer-events: auto; }
+        .slide-left-out { animation: draft-slide-left 0.5s ease-in-out forwards; }
+        .slide-right-out { animation: draft-slide-right 0.5s ease-in-out forwards; }
+        .slide-down-out { animation: draft-slide-down 0.8s ease-in-out forwards; }
+
+        @keyframes draft-zoom-fade { 0% { transform: scale(1.1); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes draft-slide-down { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(1080px); opacity: 0; } }
+        @keyframes draft-slide-left { 0% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(-1920px); opacity: 0; } }
+        @keyframes draft-slide-right { 0% { transform: translateX(0); opacity: 1; } 100% { transform: translateX(1920px); opacity: 0; } }
+
+        /* ========================================== */
+        /* DRAFT OVERLAY MAP                          */
+        /* ========================================== */
+
+        #draft-blue-logo-container { position: absolute; left: 0px; top: 739px; width: 86px; height: 86px; display: flex; justify-content: center; align-items: center; pointer-events: auto; }
+        #draft-red-logo-container { position: absolute; right: 0px; top: 739px; width: 86px; height: 86px; display: flex; justify-content: center; align-items: center; pointer-events: auto; }
+        .draft-team-logo { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        #draft-blue-team-name { position: absolute; left: 100px; top: 739px; width: 200px; height: 86px; display: flex; align-items: center; justify-content: flex-start; font-size: 65px; font-weight: bold; color: #ffb700; text-transform: uppercase; text-shadow: 2px 2px 4px #000; letter-spacing: 1px; white-space: nowrap; overflow: hidden; pointer-events: auto; }
+        #draft-red-team-name { position: absolute; right: 100px; top: 739px; width: 200px; height: 86px; display: flex; align-items: center; justify-content: flex-end; font-size: 65px; font-weight: bold; color: #ffb700; text-transform: uppercase; text-shadow: 2px 2px 4px #000; letter-spacing: 1px; text-align: right; white-space: nowrap; overflow: hidden; pointer-events: auto; }
+
+        /*#draft-blue-score-container { position: absolute; left: 671px; top: 759px; display: flex; gap: 1px; align-items: center; pointer-events: auto; }
+        #draft-red-score-container { position: absolute; right: 671px; top: 759px; display: flex; gap: 1px; flex-direction: row-reverse; align-items: center; pointer-events: auto; }*/
+        
+        /*.score-chevron { width: 32px; height: 46px; background: #222; transition: background 0.3s ease, filter 0.3s ease; }
+        .score-chevron.blue { clip-path: polygon(0% 0%, 50% 0%, 100% 50%, 50% 100%, 0% 100%, 50% 50%); }
+        .score-chevron.red { clip-path: polygon(50% 0%, 100% 0%, 50% 50%, 100% 100%, 50% 100%, 0% 50%); }
+        .score-chevron.active { background: #ffb700; filter: drop-shadow(0 0 6px rgba(255, 183, 0, 0.8)); }*/
+
+        #draft-match-info { position: absolute; left: 50%; top: 750px; transform: translateX(-50%); font-size: 22px; font-weight: bold; color: #ffcc00; text-shadow: 2px 2px 4px #000; text-align: center; pointer-events: auto; }
+
+        /* --- PICKS, PLAYERS & STATS INTEGRATION --- */
+        .pick-slot { 
+            position: absolute; 
+            top: 830px; 
+            width: 138px; 
+            height: 251px; 
+            background: transparent; 
+            border: 0px solid transparent; 
+            pointer-events: auto; 
+            overflow: visible; 
+        }
+        
+        .image-mask {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            overflow: hidden; border-radius: 4px;
+        }
+
+        .player-photo {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0;
+            transition: opacity 0.5s ease-out; opacity: 1;
+        }
+        
+        .player-photo img {
+            width: 100%; height: 100%; object-fit: cover; object-position: center bottom;
+        }
+
+        .player-name {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            text-align: center;
+            color: #fff;
+            font-size: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-shadow: 2px 2px 4px #000, -2px -2px 4px #000, 2px -2px 4px #000, -2px 2px 4px #000, 0px 4px 10px #000;
+            white-space: nowrap;
+            z-index: 2;
+        }
+        
+        .pick-slot.slot-active .player-photo,
+        .pick-slot.filled .player-photo {
+            opacity: 0;
+        }
+
+        .pick-slot .hero-img { 
+            width: 100%; height: 100%; object-fit: cover; opacity: 0.9; position: relative; z-index: 1;
+        }
+        
+        .pick-slot.empty .hero-img { display: none; }
+        
+        #bp-1 { left: 0px; } #bp-2 { left: 141px; } #bp-3 { left: 282px; } #bp-4 { left: 423px; } #bp-5 { left: 564px; }
+        #rp-1 { right: 0px; } #rp-2 { right: 141px; } #rp-3 { right: 282px; } #rp-4 { right: 423px; } #rp-5 { right: 564px; }
+
+        /* --- BANS --- */
+        .ban-slot { 
+            position: absolute; top: 745px; width: 70px; height: 70px; overflow: hidden; 
+            background: transparent; border: 2px solid transparent; border-radius: 4px; pointer-events: auto; 
+        }
+        
+        .ban-slot img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(100%); opacity: 0.6; position: relative; z-index: 1; }
+        .ban-slot.empty img { display: none; }
+        
+        .ban-slot::after { 
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: linear-gradient(45deg, transparent 45%, rgba(255,0,0,0.8) 48%, rgba(255,0,0,0.8) 52%, transparent 55%); 
+            display: none; z-index: 3; pointer-events: none;
+        }
+        .ban-slot.filled::after { display: block; }
+        
+        #bb-1 { left: 312px; } #bb-2 { left: 392px; } #bb-3 { left: 472px; } #bb-4 { left: 552px; }
+        #rb-1 { right: 312px; } #rb-2 { right: 392px; } #rb-3 { right: 472px; } #rb-4 { right: 552px; }
+
+        /* --- GLOBAL BAN PICK --- */
+        .global-bp-container { position: absolute; top: 680px; width: 350px; text-align: center; opacity: 0; transition: all 0.6s ease-in-out; pointer-events: none; }
+        .global-bp-container.blue { left: 350px; transform: translateX(-50%) translateY(20px); }
+        .global-bp-container.red { right: 350px; transform: translateX(50%) translateY(20px); }
+        .global-bp-container.blue.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .global-bp-container.red.show { opacity: 1; transform: translateX(50%) translateY(0); }
+        
+        .global-bp-heroes { display: flex; justify-content: center; gap: 8px; pointer-events: auto; }
+        .global-bp-slot { width: 50px; height: 50px; border: 2px solid #555; border-radius: 4px; overflow: hidden; background: rgba(0,0,0,0.8); }
+        .global-bp-slot img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(80%); opacity: 0.7; }
+
+        /* ========================================== */
+        /* MICRO-ANIMATIONS                           */
+        /* ========================================== */
+        @keyframes pulse-blue { 0%, 100% { box-shadow: inset 0 0 10px #00e5ff, 0 0 15px #00e5ff; border-color: #00e5ff; } 50% { box-shadow: inset 0 0 30px #00e5ff, 0 0 30px #00e5ff; border-color: #fff; } }
+        @keyframes pulse-red { 0%, 100% { box-shadow: inset 0 0 10px #ff0055, 0 0 15px #ff0055; border-color: #ff0055; } 50% { box-shadow: inset 0 0 30px #ff0055, 0 0 30px #ff0055; border-color: #fff; } }
+        
+        .slot-active.blue .image-mask,
+        .slot-active.blue.ban-slot { animation: pulse-blue 1.2s infinite; transform: scale(1.03); z-index: 10; }
+        
+        .slot-active.red .image-mask,
+        .slot-active.red.ban-slot { animation: pulse-red 1.2s infinite; transform: scale(1.03); z-index: 10; }
+
+        .action-text { position: absolute; width: 100%; text-align: center; font-weight: bold; opacity: 0; z-index: 5; text-shadow: 2px 2px 4px #000; pointer-events: none; }
+        .pick-slot .action-text { top: 75px; font-size: 22px; color: #fff; letter-spacing: 1px; }
+        .pick-slot.slot-active.empty .action-text { opacity: 1; }
+        
+        .ban-slot .action-text { top: 50%; transform: translateY(-50%); font-size: 11px; color: #fff; }
+        .ban-slot.slot-active.empty .action-text { animation: text-pulse 1s infinite; }
+        @keyframes text-pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; transform: translateY(-50%) scale(1.1); } }
+
+        .arrows-container { position: absolute; bottom: 30%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; z-index: 5; opacity: 0; pointer-events: none; }
+        .pick-slot.slot-active.empty .arrows-container { opacity: 1; }
+        
+        .arrow { width: 20px; height: 20px; background: transparent; border-bottom: 4px solid; border-right: 4px solid; margin-bottom: -10px; animation: arrow-run-down 1.2s infinite ease-in-out; opacity: 0; }
+        .blue .arrow { border-color: #00e5ff; filter: drop-shadow(0px 0px 5px #00e5ff); }
+        .red .arrow { border-color: #ff0055; filter: drop-shadow(0px 0px 5px #ff0055); }
+        .arrow:nth-child(1) { animation-delay: 0s; } .arrow:nth-child(2) { animation-delay: 0.2s; } .arrow:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes arrow-run-down { 0% { opacity: 0; transform: translateY(-15px) rotate(45deg); } 50% { opacity: 1; transform: translateY(0px) rotate(45deg); } 100% { opacity: 0; transform: translateY(15px) rotate(45deg); } }
+
+        .flash-fx { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; opacity: 0; z-index: 4; pointer-events: none; }
+        @keyframes flash-anim { 0% { opacity: 1; } 100% { opacity: 0; } }
+        .locked-in .flash-fx { animation: flash-anim 0.5s ease-out forwards; }
+        
+        @keyframes zoom-fade-pick { 0% { transform: scale(1.4); opacity: 0; filter: brightness(2); } 100% { transform: scale(1); opacity: 0.9; filter: brightness(1); } }
+        @keyframes zoom-fade-ban { 0% { transform: scale(1.4); opacity: 0; filter: brightness(2) grayscale(100%); } 100% { transform: scale(1); opacity: 0.6; filter: brightness(1) grayscale(100%); } }
+        
+        .pick-slot.locked-in .hero-img { animation: zoom-fade-pick 0.4s cubic-bezier(0.1, 0.9, 0.2, 1) forwards; }
+        .ban-slot.locked-in img { animation: zoom-fade-ban 0.4s cubic-bezier(0.1, 0.9, 0.2, 1) forwards; }
+
+        /* ========================================== */
+        /* GENERAL L3 / GRAPHIC ANIMATIONS            */
+        /* ========================================== */
+        .delay-reveal { animation-fill-mode: both; animation-timing-function: ease-out; } 
+        @keyframes fade-in { 0% { opacity: 0; } 100% { opacity: 1; } } 
+        @keyframes reveal-lr { 0% { clip-path: inset(0 100% 0 0); opacity: 0; } 100% { clip-path: inset(0 0 0 0); opacity: 1; } } 
+        @keyframes reveal-rl { 0% { clip-path: inset(0 0 0 100%); opacity: 0; } 100% { clip-path: inset(0 0 0 0); opacity: 1; } } 
+        @keyframes reveal-mo { 0% { clip-path: inset(0 50% 0 50%); opacity: 0; } 100% { clip-path: inset(0 0 0 0); opacity: 1; } } 
+        @keyframes fade-out { 0% { opacity: 1; } 100% { opacity: 0; } } 
+        @keyframes reveal-lr-out { 0% { clip-path: inset(0 0 0 0); opacity: 1; } 100% { clip-path: inset(0 100% 0 0); opacity: 0; } } 
+        @keyframes reveal-rl-out { 0% { clip-path: inset(0 0 0 0); opacity: 1; } 100% { clip-path: inset(0 0 0 100%); opacity: 0; } } 
+        @keyframes reveal-mo-out { 0% { clip-path: inset(0 0 0 0); opacity: 1; } 100% { clip-path: inset(0 50% 0 50%); opacity: 0; } } 
+        
+        .anim-fade { animation-name: fade-in; } 
+        .anim-lr { animation-name: reveal-lr; } 
+        .anim-rl { animation-name: reveal-rl; } 
+        .anim-mo { animation-name: reveal-mo; } 
+        .anim-fade-out { animation-name: fade-out !important; } 
+        .anim-lr-out { animation-name: reveal-lr-out !important; } 
+        .anim-rl-out { animation-name: reveal-rl-out !important; } 
+        .anim-mo-out { animation-name: reveal-mo-out !important; }
+    </style>
+</head>
+<body>
+    
+    <canvas id="cg-canvas" width="1920" height="1080"></canvas>
+    <video id="cg-video-in" muted playsinline></video>
+    <video id="cg-video-loop" muted playsinline></video>
+    
+    <div id="countdown-overlay">00:00</div>
+
+    <div id="bracket-overlay">
+        <div id="bracket-bg"></div>
+        <div class="bracket-title" id="bracket-main-title">TOURNAMENT BRACKET</div>
+        <div id="match-container"></div>
+    </div>
+
+    <div id="draft-overlay">
+        
+        <div id="draft-center-wrapper">
+            <div id="draft-bg"></div>
+            <div id="draft-match-info">
+                <span id="draft-match-name">Grand Final</span><br>
+                <span id="draft-game-num" style="font-size:18px; color:#fff;">Game 1</span>
+            </div>
+        </div>
+
+        <div id="draft-blue-wrapper">
+            <div class="global-bp-container blue" id="global-bp-blue">
+                <div class="global-bp-heroes" id="global-bp-blue-heroes"></div>
+            </div>
+            
+            <div id="draft-blue-logo-container">
+                <img id="draft-blue-logo" class="draft-team-logo" src="" onerror="this.style.display='none'">
+            </div>
+            
+            <div id="draft-blue-team-name"></div>
+            <div id="draft-blue-score-container"></div>
+
+            <div class="pick-slot empty" id="bp-1">
+                <div class="image-mask">
+                    <div class="player-photo">
+                        <img src="" onerror="this.style.display='none'">
+                        <div class="player-name"></div>
+                    </div>
+                    <img class="hero-img" src="">
+                    <div class="flash-fx"></div><div class="action-text">PICKING</div>
+                    <div class="arrows-container"><div class="arrow"></div><div class="arrow"></div><div class="arrow"></div></div>
+                </div>
+            </div>
+            <div class="pick-slot empty" id="bp-2">
+                <div class="image-mask">
+                    <div class="player-photo">
+                        <img src="" onerror="this.style.display='none'">
+                        <div class="player-name"></div>
+                    </div>
+                    <img class="hero-img" src="">
+                    <div class="flash-fx"></div><div class="action-text">PICKING</div>
+                    <div class="arrows-container"><div class="arrow"></div><div class="arrow"></div><div class="arrow"></div></div>
+                </div>
+            </div>
+            <div class="pick-slot empty" id="bp-3">
+                <div class="image-mask">
+                    <div class="player-photo">
+                        <img src="" onerror="this.style.display='none'">
+                        <div class="player-name"></div>
+                    </div>
+                    <img class="hero-img" src="">
+                    <div class="flash-fx"></div><div class="action-text">PICKING</div>
+                    <div class="arrows-container"><div class="arrow"></div><div class="arrow"></div><div class="arrow"></div></div>
+                </div>
+            </div>
+            <div class="pick-slot empty" id="bp-4">
+                <div class="image-mask">
+                    <div class="player-photo">
+                        <img src="" onerror="this.style.display='none'">
+                        <div class="player-name"></div>
+                    </div>
+                    <img class="hero-img" src="">
+                    <div class="flash-fx"></div><div class="action-text">PICKING</div>
+                    <div class="arrows-container"><div class="arrow"></div><div class="arrow"></div><div class="arrow"></div></div>
+                </div>
+            </div>
+            <div class="pick-slot empty" id="bp-5">
+                <div class="image-mask">
+                    <div class="player-photo">
+                        <img src="" onerror="this.style.display='none'">
+                        <div class="player-name"></div>
+                    </div>
+                    <img class="hero-img" src="">
+                    <div class="flash-fx"></div><div class="action-text">PICKING</div>
+                    <div class="arrows-container"><div class="arrow"></div><div class="arrow"></div><div class="arrow"></div></div>
+                </div>
+            </div>
+
+            <div class="ban-slot empty" id="bb-1">
+                <div class="image-mask"><img src=""></div><div class="flash-fx"></div><div class="action-text">BANNING</div>
+            </div>
+            <div class="ban-slot empty" id="bb-2">
+                <div class="image-mask"><img src=""></div><div class="flash-fx"></div><div class="action-text">BANNING</div>
+            </div>
+            <div class="ban-slot empty" id="bb-3">
+                <div class="image-mask"><img src=""></div><div class="flash-fx"></div><div class="action-text">BANNING</div>
+            </div>
+            <div class="ban-slot empty" id="bb-4">
+                <div class="image-mask"><img src=""></div><div class="flash-fx"></div><div class="action-text">BANNING</div>
+            </div>
+        </div>
+
+        <div id="draft-red-wrapper">
+            <div class="global-bp-container red" id="global-bp-red">
+                <div class="global-bp-heroes" id="global-bp-red-heroes"></div>
+            </div>
+            
+            <div id="draft-red-logo-container">
+                <img id="draft-red-logo" class="draft-team-logo" src="" onerror="this.style.display='none'">
+            </div>
+            
+            <div id="draft-red-team-name"></div>
+            <div id="draft-red-score-container"></div>
+
+            <div class="pick-slot empty" id="rp-1">
+                <div class="image-mask">
+                    <div class="player-photo">
+                        <img src="" onerror="this.style.display='none'">
+                        <div class="player-name"></div>
+                    </div>
+                    <img class="hero-img" src="">
+                    <div class="flash-fx"></div><div class="action-text">PICKING</div>
+                    <div class="arrows-container"><div class="arrow"></div><div class="arrow"></div><div class="arrow"></div></div>
+                </div>
+            </div>
+            <div class="pick-slot empty" id="rp-2">
+                <div class="image-mask">
+                    <div class="player-photo">
+                        <img src="" onerror="this.style.display='none'">
+                        <div class="player-name"></div>
+                    </div>
+                    <img class="hero-img" src="">
+                    <div class="flash-fx"></div><div class="action-text">PICKING</div>
+                    <div class="arrows-container"><div class="arrow"></div><div class="arrow"></div><div class="arrow"></div></div>
+                </div>
+            </div>
+            <div class="pick-slot empty" id="rp-3">
+                <div class="image-mask">
+                    <div class="player-photo">
+                        <img src="" onerror="this.style.display='none'">
+                        <div class="player-name"></div>
+                    </div>
+                    <img class="hero-img" src="">
+                    <div class="flash-fx"></div><div class="action-text">PICKING</div>
+                    <div class="arrows-container"><div class="arrow"></div><div class="arrow"></div><div class="arrow"></div></div>
+                </div>
+            </div>
+            <div class="pick-slot empty" id="rp-4">
+                <div class="image-mask">
+                    <div class="player-photo">
+                        <img src="" onerror="this.style.display='none'">
+                        <div class="player-name"></div>
+                    </div>
+                    <img class="hero-img" src="">
+                    <div class="flash-fx"></div><div class="action-text">PICKING</div>
+                    <div class="arrows-container"><div class="arrow"></div><div class="arrow"></div><div class="arrow"></div></div>
+                </div>
+            </div>
+            <div class="pick-slot empty" id="rp-5">
+                <div class="image-mask">
+                    <div class="player-photo">
+                        <img src="" onerror="this.style.display='none'">
+                        <div class="player-name"></div>
+                    </div>
+                    <img class="hero-img" src="">
+                    <div class="flash-fx"></div><div class="action-text">PICKING</div>
+                    <div class="arrows-container"><div class="arrow"></div><div class="arrow"></div><div class="arrow"></div></div>
+                </div>
+            </div>
+
+            <div class="ban-slot empty" id="rb-1">
+                <div class="image-mask"><img src=""></div><div class="flash-fx"></div><div class="action-text">BANNING</div>
+            </div>
+            <div class="ban-slot empty" id="rb-2">
+                <div class="image-mask"><img src=""></div><div class="flash-fx"></div><div class="action-text">BANNING</div>
+            </div>
+            <div class="ban-slot empty" id="rb-3">
+                <div class="image-mask"><img src=""></div><div class="flash-fx"></div><div class="action-text">BANNING</div>
+            </div>
+            <div class="ban-slot empty" id="rb-4">
+                <div class="image-mask"><img src=""></div><div class="flash-fx"></div><div class="action-text">BANNING</div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="text-overlays">
+        <div id="template-l3_basic">
+            <h1 id="l3_basic_title">Name</h1>
+            <h2 id="l3_basic_sub">Title</h2>
+        </div>
+        <div id="template-l3_caster">
+            <div id="l3_caster_1">Caster One</div>
+            <div id="l3_caster_2">Caster Two</div>
+        </div>
+    </div>
+
+    <script src="/socket.io.min.js"></script>
+    <script>
+        const socket = io(); 
+        const urlParams = new URLSearchParams(window.location.search); 
+        const myChannel = parseInt(urlParams.get('channel')) || 1;
+        
+        const canvas = document.getElementById('cg-canvas'); 
+        const videoIn = document.getElementById('cg-video-in'); 
+        const videoLoop = document.getElementById('cg-video-loop'); 
+        const ctx = canvas.getContext('2d'); 
+        
+        const countdownEl = document.getElementById('countdown-overlay'); 
+        const draftOverlay = document.getElementById('draft-overlay');
+        const bracketOverlay = document.getElementById('bracket-overlay');
+        
+        const graphicsLibrary = {}; 
+        const activeTemplates = {}; 
+        const fps = 60; 
+        
+        let playInterval;
+        let loopInterval;
+        let assetInTimeout;
+        let assetOutTimeout;
+        let textOutTimeout;
+        
+        let timerInterval;
+        let targetEndTime = 0;
+        let pausedRemainingMs = 0;
+        let isTimerRunning = false;
+        let timerSettings = {};
+        
+        let globalBPTimer; 
+        let currentBPIndex = 0; 
+        let availableBPGames = []; 
+        let bpDataStore = null;
+
+        // --- BRACKET ENGINE ---
+        function renderBracket(data) {
+            const container = document.getElementById('match-container');
+            container.innerHTML = ''; 
+
+            data.matches.forEach((m, index) => {
+                const match = m.match;
+                const p1 = data.participants[match.player1_id] || "TBD";
+                const p2 = data.participants[match.player2_id] || "TBD";
+                
+                const scores = match.scores_csv ? match.scores_csv.split('-') : [0, 0];
+                
+                let type = match.round > 0 ? "ub" : "lb";
+                let roundAbs = Math.abs(match.round);
+                
+                const box = document.createElement('div');
+                box.className = `match-box col-${type}-${roundAbs}`;
+                box.id = `match-${type}-${roundAbs}-${index}`;
+                
+                box.style.top = (150 + (index * 80)) + "px"; 
+                if(type === 'ub' && roundAbs === 1) box.style.left = "50px";
+                if(type === 'ub' && roundAbs === 2) box.style.left = "320px";
+                if(type === 'ub' && roundAbs === 3) box.style.left = "590px";
+
+                box.innerHTML = `
+                    <div class="team-row ${parseInt(scores[0]) > parseInt(scores[1]) ? 'winner' : ''}">
+                        <span class="team-name">${p1}</span>
+                        <span class="team-score">${scores[0]}</span>
+                    </div>
+                    <div class="team-row ${parseInt(scores[1]) > parseInt(scores[0]) ? 'winner' : ''}">
+                        <span class="team-name">${p2}</span>
+                        <span class="team-score">${scores[1]}</span>
+                    </div>
+                `;
+                container.appendChild(box);
+            });
+        }
+
+
+        // --- ASSET ENGINES ---
+        function startLoopGraphic(asset) { 
+            if (asset.loopAssetType === 'webm') { 
+                videoIn.style.display = 'none'; 
+                canvas.style.display = 'none'; 
+                
+                videoLoop.src = asset.loopSrc; 
+                videoLoop.style.opacity = '1'; 
+                videoLoop.style.display = 'block'; 
+                videoLoop.loop = true; 
+                videoLoop.currentTime = 0; 
+                videoLoop.play(); 
+            } else { 
+                videoIn.style.display = 'none'; 
+                videoLoop.style.display = 'none'; 
+                canvas.style.display = 'block'; 
+                
+                let currentFrame = 0; 
+                
+                loopInterval = setInterval(() => { 
+                    ctx.clearRect(0, 0, canvas.width, canvas.height); 
+                    
+                    if (asset.loopFrames[currentFrame]) { 
+                        ctx.drawImage(asset.loopFrames[currentFrame], 0, 0); 
+                    } 
+                    
+                    currentFrame++; 
+                    
+                    if (currentFrame >= asset.loopFrameCount) { 
+                        currentFrame = 0; 
+                    } 
+                }, 1000 / fps); 
+            } 
+        }
+        
+        function playGraphic(asset) { 
+            videoIn.style.display = 'none'; 
+            videoLoop.style.display = 'none'; 
+            canvas.style.display = 'none'; 
+            
+            clearInterval(playInterval); 
+            clearInterval(loopInterval); 
+            videoIn.onended = null; 
+            
+            if (asset.type === 'webm') { 
+                videoIn.src = asset.src; 
+                videoIn.style.opacity = '1'; 
+                videoIn.style.display = 'block'; 
+                videoIn.currentTime = 0; 
+                
+                if (asset.hasLoop) { 
+                    videoIn.onended = () => { 
+                        startLoopGraphic(asset); 
+                    }; 
+                } 
+                videoIn.play(); 
+            } else { 
+                canvas.style.display = 'block'; 
+                let currentFrame = 0; 
+                
+                playInterval = setInterval(() => { 
+                    ctx.clearRect(0, 0, canvas.width, canvas.height); 
+                    
+                    if (asset.frames[currentFrame]) { 
+                        ctx.drawImage(asset.frames[currentFrame], 0, 0); 
+                    } 
+                    
+                    currentFrame++; 
+                    
+                    if (currentFrame >= asset.frameCount) { 
+                        clearInterval(playInterval); 
+                        if (asset.hasLoop) { 
+                            startLoopGraphic(asset); 
+                        } 
+                    } 
+                }, 1000 / fps); 
+            } 
+        }
+        
+        function outGraphic(asset) { 
+            clearInterval(playInterval); 
+            clearInterval(loopInterval); 
+            videoIn.onended = null; 
+            videoLoop.pause(); 
+            videoLoop.style.display = 'none'; 
+            
+            if (asset.type === 'webm') { 
+                videoIn.style.display = 'block'; 
+                videoIn.style.opacity = '0'; 
+                
+                setTimeout(() => { 
+                    videoIn.style.display = 'none'; 
+                    videoIn.pause(); 
+                }, 500); 
+            } else { 
+                canvas.style.display = 'block'; 
+                let currentFrame = asset.frameCount - 1; 
+                
+                playInterval = setInterval(() => { 
+                    ctx.clearRect(0, 0, canvas.width, canvas.height); 
+                    
+                    if (asset.frames[currentFrame]) { 
+                        ctx.drawImage(asset.frames[currentFrame], 0, 0); 
+                    } 
+                    
+                    currentFrame--; 
+                    
+                    if (currentFrame < 0) { 
+                        clearInterval(playInterval); 
+                        ctx.clearRect(0, 0, canvas.width, canvas.height); 
+                        canvas.style.display = 'none'; 
+                    } 
+                }, 1000 / fps); 
+            } 
+        }
+        
+        function killAllElements() { 
+            clearInterval(playInterval); 
+            clearInterval(loopInterval); 
+            clearInterval(globalBPTimer); 
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height); 
+            canvas.style.display = 'none'; 
+            
+            videoIn.style.display = 'none'; 
+            videoLoop.style.display = 'none'; 
+            videoIn.pause(); 
+            videoLoop.pause(); 
+            
+            draftOverlay.className = '';
+            draftOverlay.style.display = 'none';
+            bracketOverlay.classList.remove('show');
+            
+            document.getElementById('draft-blue-wrapper').className = '';
+            document.getElementById('draft-red-wrapper').className = '';
+            document.getElementById('draft-center-wrapper').className = '';
+            
+            ['template-l3_basic', 'template-l3_caster'].forEach(id => { 
+                const el = document.getElementById(id); 
+                if (el) { 
+                    el.style.display = 'none'; 
+                    el.className = ''; 
+                    el.style.animationDelay = ''; 
+                    el.style.animationDuration = ''; 
+                } 
+            }); 
+        }
+        
+        async function loadFont(fontValue) { 
+            if (!fontValue) return 'Arial'; 
+            
+            if (fontValue.match(/\.(ttf|otf|woff|woff2)$/i)) { 
+                const fontName = fontValue.split('.')[0]; 
+                const fontUrl = `/fonts/${fontValue}`; 
+                let isLoaded = false; 
+                
+                document.fonts.forEach(f => { 
+                    if(f.family === fontName) {
+                        isLoaded = true;
+                    } 
+                }); 
+                
+                if (!isLoaded) { 
+                    const newFont = new FontFace(fontName, `url("${fontUrl}")`); 
+                    await newFont.load(); 
+                    document.fonts.add(newFont); 
+                } 
+                return fontName; 
+            } 
+            return fontValue; 
+        }
+
+        // --- TIMER RENDER ENGINE ---
+        function applyTimerStyles() { 
+            countdownEl.style.fontSize = timerSettings.size; 
+            countdownEl.style.color = timerSettings.color; 
+            countdownEl.style.fontFamily = timerSettings.font; 
+            countdownEl.style.textShadow = timerSettings.dropShadow ? '3px 3px 6px rgba(0,0,0,0.9)' : 'none'; 
+            
+            countdownEl.style.top = 'auto'; 
+            countdownEl.style.bottom = 'auto'; 
+            countdownEl.style.left = 'auto'; 
+            countdownEl.style.right = 'auto'; 
+            countdownEl.style.transform = 'none'; 
+            
+            const offset = '80px'; 
+            
+            switch(timerSettings.position) { 
+                case 'center': 
+                    countdownEl.style.top = '50%'; 
+                    countdownEl.style.left = '50%'; 
+                    countdownEl.style.transform = 'translate(-50%, -50%)'; 
+                    break; 
+                case 'top-left': 
+                    countdownEl.style.top = offset; 
+                    countdownEl.style.left = offset; 
+                    break; 
+                case 'top-right': 
+                    countdownEl.style.top = offset; 
+                    countdownEl.style.right = offset; 
+                    break; 
+                case 'bottom-left': 
+                    countdownEl.style.bottom = offset; 
+                    countdownEl.style.left = offset; 
+                    break; 
+                case 'bottom-right': 
+                    countdownEl.style.bottom = offset; 
+                    countdownEl.style.right = offset; 
+                    break; 
+                case 'top-center': 
+                    countdownEl.style.top = offset; 
+                    countdownEl.style.left = '50%'; 
+                    countdownEl.style.transform = 'translateX(-50%)'; 
+                    break; 
+                case 'bottom-center': 
+                    countdownEl.style.bottom = offset; 
+                    countdownEl.style.left = '50%'; 
+                    countdownEl.style.transform = 'translateX(-50%)'; 
+                    break; 
+                case 'custom': 
+                    countdownEl.style.top = timerSettings.y + 'px'; 
+                    countdownEl.style.left = timerSettings.x + 'px'; 
+                    break; 
+            } 
+        }
+        
+        function updateTimerDisplay() { 
+            const now = Date.now(); 
+            let remaining = isTimerRunning ? targetEndTime - now : pausedRemainingMs; 
+            
+            if (remaining <= 0) { 
+                countdownEl.innerText = timerSettings.showSoon ? "SOON" : "00:00"; 
+                if (isTimerRunning) { 
+                    clearInterval(timerInterval); 
+                    isTimerRunning = false; 
+                } 
+                return; 
+            } 
+            
+            let totalSeconds = Math.floor(remaining / 1000); 
+            let m = Math.floor(totalSeconds / 60); 
+            let s = totalSeconds % 60; 
+            
+            countdownEl.innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`; 
+        }
+
+        // --- DRAFT STATE ENGINE ---
+        const DRAFT_SEQUENCE = [ 
+            [], 
+            ['bb-1'], ['rb-1'], 
+            ['bb-2'], ['rb-2'], 
+            ['bp-1'], 
+            ['rp-1', 'rp-2'], 
+            ['bp-2', 'bp-3'], 
+            ['rp-3'], 
+            ['rb-3'], ['bb-3'], 
+            ['rb-4'], ['bb-4'], 
+            ['rp-4'], 
+            ['bp-4', 'bp-5'], 
+            ['rp-5'] 
+        ];
+
+        function updateDraftSlot(id, heroName, statsData) {
+            const slot = document.getElementById(id); 
+            if (!slot) return;
+            
+            const isPick = id.includes('p-');
+            const img = slot.querySelector(isPick ? '.hero-img' : 'img'); 
+            const folderType = isPick ? 'picks' : 'bans';
+            
+            const currentHero = slot.getAttribute('data-hero') || ''; 
+            const cleanName = heroName ? heroName.toLowerCase().replace(/\s+/g, '') : '';
+            
+            if (cleanName) { 
+                if (currentHero !== cleanName) { 
+                    slot.setAttribute('data-hero', cleanName); 
+                    img.src = `/assets/draft/${folderType}/${cleanName}.png`; 
+                    img.style.display = 'block'; 
+
+                    // NEW: Inject Real Stats for Picks only
+                    if (isPick) {
+                        const pbEl = slot.querySelector('.pb-val');
+                        const wrEl = slot.querySelector('.wr-val');
+                        if (pbEl) pbEl.innerText = statsData ? statsData.pb : '--%';
+                        if (wrEl) wrEl.innerText = statsData ? statsData.wr : '--%';
+                    }
+                    
+                    slot.classList.remove('empty'); 
+                    slot.classList.add('filled'); 
+                    
+                    slot.classList.remove('locked-in'); 
+                    void slot.offsetWidth; 
+                    slot.classList.add('locked-in'); 
+                }
+            } else { 
+                slot.setAttribute('data-hero', ''); 
+                slot.classList.add('empty'); 
+                slot.classList.remove('filled'); 
+                slot.classList.remove('locked-in'); 
+                
+                img.src = ''; 
+                img.style.display = 'none'; 
+            }
+        }
+
+        function renderGlobalBP(index) {
+            const blueCont = document.getElementById('global-bp-blue');
+            const redCont = document.getElementById('global-bp-red');
+            
+            blueCont.classList.remove('show'); 
+            redCont.classList.remove('show');
+
+            setTimeout(() => {
+                if(!availableBPGames[index]) return;
+                
+                const gameNum = availableBPGames[index];
+                const bHeroes = bpDataStore.blueUsed[gameNum - 1] || [];
+                const rHeroes = bpDataStore.redUsed[gameNum - 1] || [];
+
+                let bHtml = ''; 
+                let rHtml = '';
+                
+                for(let i = 0; i < 5; i++) {
+                    const bH = bHeroes[i] ? bHeroes[i].toLowerCase().replace(/\s+/g, '') : '';
+                    const rH = rHeroes[i] ? rHeroes[i].toLowerCase().replace(/\s+/g, '') : '';
+                    
+                    bHtml += `<div class="global-bp-slot">${bH ? `<img src="/assets/draft/global/${bH}.png" onerror="this.style.display='none'">` : ''}</div>`;
+                    rHtml += `<div class="global-bp-slot">${rH ? `<img src="/assets/draft/global/${rH}.png" onerror="this.style.display='none'">` : ''}</div>`;
+                }
+                
+                document.getElementById('global-bp-blue-heroes').innerHTML = bHtml;
+                document.getElementById('global-bp-red-heroes').innerHTML = rHtml;
+
+                setTimeout(() => { 
+                    blueCont.classList.add('show'); 
+                    redCont.classList.add('show'); 
+                }, 50);
+                
+            }, 600); 
+        }
+
+        // --- GLOBAL COMMAND LISTENER ---
+        socket.on('execute-graphic', async (data) => {
+            
+            // --- BRACKET ROUTING ---
+            if (data.type === 'bracket' && data.channel === myChannel) {
+                if (data.action === 'show') {
+                    const font = await loadFont(data.fontRaw);
+                    bracketOverlay.style.fontFamily = font;
+                    renderBracket(data.data);
+                    bracketOverlay.classList.add('show');
+                } else {
+                    bracketOverlay.classList.remove('show');
+                }
+                return;
+            }
+
+            // --- DRAFT ROUTING ---
+            if (data.type === 'draft' && data.channel === myChannel) {
+                
+                if (data.action === 'show') {
+                    
+                    const draftFontFamily = await loadFont(data.fontRaw);
+                    draftOverlay.style.fontFamily = draftFontFamily;
+
+                    document.getElementById('draft-blue-wrapper').className = '';
+                    document.getElementById('draft-red-wrapper').className = '';
+                    document.getElementById('draft-center-wrapper').className = '';
+
+                    if (data.state.step === 0) {
+                        draftOverlay.className = ''; 
+                        draftOverlay.style.display = 'block'; 
+                        
+                        void draftOverlay.offsetWidth; 
+                        
+                        draftOverlay.classList.add('draft-in-anim');
+                        
+                    } else {
+                        draftOverlay.className = 'draft-static';
+                        draftOverlay.style.display = 'block';
+                    }
+
+                    // Update Logos
+                    document.getElementById('draft-blue-logo').src = `/assets/draft/teams/${data.state.blueTeam.toLowerCase().replace(/\s+/g, '')}.png`;
+                    document.getElementById('draft-blue-logo').style.display = data.state.blueTeam ? 'block' : 'none';
+                    
+                    document.getElementById('draft-red-logo').src = `/assets/draft/teams/${data.state.redTeam.toLowerCase().replace(/\s+/g, '')}.png`;
+                    document.getElementById('draft-red-logo').style.display = data.state.redTeam ? 'block' : 'none';
+                    
+                    // Update Text
+                    document.getElementById('draft-blue-team-name').innerText = data.state.blueTeam;
+                    document.getElementById('draft-red-team-name').innerText = data.state.redTeam;
+                    document.getElementById('draft-match-name').innerText = data.state.matchName;
+                    document.getElementById('draft-game-num').innerText = data.state.gameNum;
+
+                    // Update Score Chevrons
+                    const bScore = parseInt(data.state.blueScore) || 0; 
+                    const rScore = parseInt(data.state.redScore) || 0;
+                    
+                    /*const bCont = document.getElementById('draft-blue-score-container'); 
+                    const rCont = document.getElementById('draft-red-score-container');
+                    
+                    bCont.innerHTML = ''; 
+                    rCont.innerHTML = '';
+                    
+                    for(let i = 0; i < 3; i++) {
+                        let bp = document.createElement('div'); 
+                        bp.className = 'score-chevron blue' + (i < bScore ? ' active' : ''); 
+                        bCont.appendChild(bp);
+                        
+                        let rp = document.createElement('div'); 
+                        rp.className = 'score-chevron red' + (i < rScore ? ' active' : ''); 
+                        rCont.appendChild(rp);
+                    }*/
+
+                    // Update Player Photos & Names
+                    if (data.state.bluePlayers) {
+                        data.state.bluePlayers.forEach((p, i) => {
+                            const slot = document.getElementById(`bp-${i+1}`);
+                            if(slot) {
+                                slot.querySelector('.player-name').innerText = p || "";
+                                const photoImg = slot.querySelector('.player-photo img');
+                                const cleanName = p ? p.toLowerCase().replace(/\s+/g, '') : '';
+                                if (cleanName) {
+                                    photoImg.src = `/assets/players/${cleanName}.png`;
+                                    photoImg.style.display = 'block'; 
+                                } else {
+                                    photoImg.src = '';
+                                    photoImg.style.display = 'none';
+                                }
+                            }
+                        });
+                    }
+
+                    if (data.state.redPlayers) {
+                        data.state.redPlayers.forEach((p, i) => {
+                            const slot = document.getElementById(`rp-${i+1}`);
+                            if(slot) {
+                                slot.querySelector('.player-name').innerText = p || "";
+                                const photoImg = slot.querySelector('.player-photo img');
+                                const cleanName = p ? p.toLowerCase().replace(/\s+/g, '') : '';
+                                if (cleanName) {
+                                    photoImg.src = `/assets/players/${cleanName}.png`;
+                                    photoImg.style.display = 'block';
+                                } else {
+                                    photoImg.src = '';
+                                    photoImg.style.display = 'none';
+                                }
+                            }
+                        });
+                    }
+
+                    // NEW: Fetch correct DB stats and update Slots
+                    data.state.bluePicks.forEach((h, i) => updateDraftSlot(`bp-${i+1}`, h, data.state.bluePickStats[i]));
+                    data.state.redPicks.forEach((h, i) => updateDraftSlot(`rp-${i+1}`, h, data.state.redPickStats[i]));
+                    data.state.blueBans.forEach((h, i) => updateDraftSlot(`bb-${i+1}`, h, null));
+                    data.state.redBans.forEach((h, i) => updateDraftSlot(`rb-${i+1}`, h, null));
+
+                    // Apply active highlighting
+                    document.querySelectorAll('.slot-active').forEach(el => { 
+                        el.classList.remove('slot-active', 'blue', 'red'); 
+                    });
+                    
+                    if (data.state.step > 0 && data.state.step <= 15) {
+                        const activeIDs = DRAFT_SEQUENCE[data.state.step];
+                        activeIDs.forEach(id => {
+                            const el = document.getElementById(id); 
+                            el.classList.add('slot-active');
+                            if (id.startsWith('b')) { el.classList.add('blue'); }
+                            if (id.startsWith('r')) { el.classList.add('red'); }
+                        });
+                    }
+
+                    // Handle Global BP State
+                    bpDataStore = data.state;
+                    availableBPGames = [];
+                    
+                    for(let i = 0; i < 4; i++) {
+                        if((bpDataStore.blueUsed[i] && bpDataStore.blueUsed[i].length > 0) || 
+                           (bpDataStore.redUsed[i] && bpDataStore.redUsed[i].length > 0)) {
+                            availableBPGames.push(i+1); 
+                        }
+                    }
+                    
+                    clearInterval(globalBPTimer);
+                    
+                    if(availableBPGames.length > 0) {
+                        currentBPIndex = 0;
+                        renderGlobalBP(currentBPIndex);
+                        
+                        if(availableBPGames.length > 1) {
+                            globalBPTimer = setInterval(() => {
+                                currentBPIndex = (currentBPIndex + 1) % availableBPGames.length;
+                                renderGlobalBP(currentBPIndex);
+                            }, 7000); 
+                        }
+                    } else {
+                        document.getElementById('global-bp-blue').classList.remove('show');
+                        document.getElementById('global-bp-red').classList.remove('show');
+                    }
+
+                // --- HIDE ACTION ---
+                } else if (data.action === 'hide') {
+                    clearInterval(globalBPTimer);
+                    
+                    draftOverlay.className = 'draft-static';
+                    
+                    document.getElementById('draft-blue-wrapper').classList.add('slide-left-out');
+                    document.getElementById('draft-red-wrapper').classList.add('slide-right-out');
+                    document.getElementById('draft-center-wrapper').classList.add('slide-down-out');
+
+                    setTimeout(() => {
+                        draftOverlay.style.display = 'none';
+                        draftOverlay.className = ''; 
+                        
+                        document.getElementById('draft-blue-wrapper').className = '';
+                        document.getElementById('draft-red-wrapper').className = '';
+                        document.getElementById('draft-center-wrapper').className = '';
+                    }, 800);
+                }
+                return;
+            }
+
+            // --- STANDARD ASSET PRELOAD ---
+            if (data.action === 'preload') { 
+                const asset = { 
+                    type: data.assetType, 
+                    frameCount: data.frameCount, 
+                    hasLoop: data.hasLoop, 
+                    loopAssetType: data.loopAssetType, 
+                    loopFrameCount: data.loopFrameCount 
+                }; 
+                
+                if (data.assetType === 'webm') { 
+                    asset.src = `/assets/${data.folder}/${data.filenames[0]}`; 
+                } else { 
+                    asset.frames = data.filenames.map(f => { 
+                        const img = new Image(); 
+                        img.src = `/assets/${data.folder}/${f}`; 
+                        return img; 
+                    }); 
+                } 
+                
+                if (data.hasLoop) { 
+                    if (data.loopAssetType === 'webm') { 
+                        asset.loopSrc = `/assets/${data.folder}/${data.loopFilenames[0]}`; 
+                    } else { 
+                        asset.loopFrames = data.loopFilenames.map(f => { 
+                            const img = new Image(); 
+                            img.src = `/assets/${data.folder}/${f}`; 
+                            return img; 
+                        }); 
+                    } 
+                } 
+                
+                graphicsLibrary[data.folder] = asset; 
+            }
+            
+            // --- STANDARD ASSET TRIGGER LOGIC ---
+            if (data.channel === myChannel) { 
+                clearTimeout(assetInTimeout); 
+                clearTimeout(assetOutTimeout); 
+                clearTimeout(textOutTimeout); 
+                
+                const activeAsset = graphicsLibrary[data.folder]; 
+                if (!activeAsset && data.action !== 'panic') return; 
+                
+                if (data.action === 'play') { 
+                    const delayInMs = parseInt(data.styleData?.pngDelayIn) || 0; 
+                    
+                    assetInTimeout = setTimeout(() => { 
+                        playGraphic(activeAsset); 
+                    }, delayInMs); 
+                    
+                    if (data.template !== 'none') { 
+                        let activeTemplate = null; 
+                        const titleFontFamily = await loadFont(data.styleData.globalTitleFont); 
+                        const subFontFamily = await loadFont(data.styleData.globalSubFont); 
+                        const textShadowVal = data.styleData.dropShadow ? '2px 2px 4px rgba(0,0,0,0.8)' : 'none'; 
+                        
+                        if (data.template === 'l3_basic') { 
+                            document.getElementById('l3_basic_title').innerText = data.textData.title; 
+                            document.getElementById('l3_basic_title').style.fontSize = data.styleData.size1; 
+                            document.getElementById('l3_basic_title').style.color = data.styleData.color1; 
+                            document.getElementById('l3_basic_title').style.fontFamily = titleFontFamily; 
+                            
+                            document.getElementById('l3_basic_sub').innerText = data.textData.subtitle; 
+                            document.getElementById('l3_basic_sub').style.fontSize = data.styleData.size2; 
+                            document.getElementById('l3_basic_sub').style.color = data.styleData.color2; 
+                            document.getElementById('l3_basic_sub').style.fontFamily = subFontFamily; 
+                            
+                            activeTemplate = document.getElementById('template-l3_basic'); 
+                            
+                        } else if (data.template === 'l3_caster') { 
+                            document.getElementById('l3_caster_1').innerText = data.textData.caster1; 
+                            document.getElementById('l3_caster_1').style.fontSize = data.styleData.size1; 
+                            document.getElementById('l3_caster_1').style.color = data.styleData.color1; 
+                            document.getElementById('l3_caster_1').style.fontFamily = titleFontFamily; 
+                            
+                            document.getElementById('l3_caster_2').innerText = data.textData.caster2; 
+                            document.getElementById('l3_caster_2').style.fontSize = data.styleData.size2; 
+                            document.getElementById('l3_caster_2').style.color = data.styleData.color2; 
+                            document.getElementById('l3_caster_2').style.fontFamily = subFontFamily; 
+                            
+                            activeTemplate = document.getElementById('template-l3_caster'); 
+                        } 
+                        
+                        if (activeTemplate) { 
+                            activeTemplate.style.textShadow = textShadowVal; 
+                            
+                            activeTemplates[data.folder] = { 
+                                elementId: activeTemplate.id, 
+                                outAnimation: data.animationStyle + '-out' 
+                            }; 
+                            
+                            activeTemplate.style.animationDelay = data.styleData.textDelayIn; 
+                            activeTemplate.style.animationDuration = data.styleData.durationIn; 
+                            activeTemplate.style.display = 'block'; 
+                            activeTemplate.className = `delay-reveal ${data.animationStyle}`; 
+                        } 
+                    } 
+                    
+                } else if (data.action === 'out') { 
+                    const activeText = activeTemplates[data.folder]; 
+                    
+                    if (activeText && data.template !== 'none') { 
+                        const el = document.getElementById(activeText.elementId); 
+                        
+                        el.style.animationDelay = data.styleData.textDelayOut; 
+                        el.style.animationDuration = data.styleData.durationOut; 
+                        el.className = `delay-reveal ${activeText.outAnimation}`; 
+                        
+                        textOutTimeout = setTimeout(() => { 
+                            el.style.display = 'none'; 
+                            el.className = ''; 
+                        }, parseInt(data.styleData.textDelayOut || 0) + parseInt(data.styleData.durationOut || 0)); 
+                        
+                        assetOutTimeout = setTimeout(() => { 
+                            outGraphic(activeAsset); 
+                        }, parseInt(data.styleData.pngDelayOut) || 0); 
+                        
+                    } else { 
+                        assetOutTimeout = setTimeout(() => { 
+                            outGraphic(activeAsset); 
+                        }, parseInt(data.styleData?.pngDelayOut) || 0); 
+                    } 
+                    
+                } else if (data.action === 'panic') { 
+                    killAllElements(); 
+                } 
+            }
+        });
+
+        // --- TELEMETRY ENGINE ---
+        let frameTimes = []; 
+        
+        function measureFPS() { 
+            const now = performance.now(); 
+            
+            while (frameTimes.length > 0 && frameTimes[0] <= now - 1000) { 
+                frameTimes.shift(); 
+            } 
+            
+            frameTimes.push(now); 
+            requestAnimationFrame(measureFPS); 
+        } 
+        
+        requestAnimationFrame(measureFPS); 
+        
+        setInterval(() => { 
+            const currentFps = frameTimes.length; 
+            const mem = window.performance && window.performance.memory ? Math.round(performance.memory.usedJSHeapSize / 1048576) : 'N/A'; 
+            
+            socket.emit('telemetry-report', { 
+                channel: myChannel, 
+                fps: currentFps, 
+                ram: mem 
+            }); 
+            
+        }, 1000);
+    </script>
+</body>
+</html>

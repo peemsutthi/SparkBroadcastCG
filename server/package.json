@@ -1,0 +1,17 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "scripts": {
+    "test": "node check.js",
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "WebSocket relay between control and cg",
+  "type": "module",
+  "dependencies": {
+    "sirv": "^3.0.2",
+    "ws": "^8.21.3"
+  }
+}

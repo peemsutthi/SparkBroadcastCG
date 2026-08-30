@@ -1,0 +1,402 @@
+/* Ported from the prototype's output.html. The pixel coordinates are tuned to
+   overlayhud/hud.png — moving them moves the overlay off its artwork. The
+   browser source must be 1920x1080, as the README says. */
+.draft-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1920px;
+  height: 1080px;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.draft-center,
+.draft-blue,
+.draft-red {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.draft-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center bottom;
+}
+
+.draft-match-info {
+  position: absolute;
+  top: 750px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 22px;
+  font-weight: bold;
+  color: #ffcc00;
+  text-align: center;
+  text-shadow: 2px 2px 4px #000;
+}
+
+.draft-game-num {
+  font-size: 18px;
+  color: #fff;
+}
+
+.draft-team-name {
+  position: absolute;
+  top: 739px;
+  display: flex;
+  align-items: center;
+  width: 200px;
+  height: 86px;
+  overflow: hidden;
+  font-size: 65px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  color: #ffb700;
+  text-transform: uppercase;
+  text-shadow: 2px 2px 4px #000;
+  white-space: nowrap;
+}
+
+.draft-team-name span {
+  flex: none;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+.draft-team-name.blue {
+  left: 100px;
+  justify-content: flex-start;
+}
+
+.draft-team-name.red {
+  right: 100px;
+  justify-content: flex-end;
+  text-align: right;
+}
+
+/* ── Picks ──────────────────────────────────────────────────────────── */
+.pick-slot {
+  position: absolute;
+  top: 830px;
+  width: 138px;
+  height: 251px;
+  overflow: visible;
+}
+
+.image-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.hero-img {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.9;
+}
+
+/* No player photos here, so the name stays legible over the hero art rather
+   than crossfading out with a portrait that does not exist. */
+.player-name {
+  position: absolute;
+  bottom: 10px;
+  z-index: 2;
+  width: 100%;
+  font-size: 20px;
+  font-weight: bold;
+  color: #fff;
+  text-align: center;
+  text-transform: uppercase;
+  text-shadow:
+    2px 2px 4px #000,
+    -2px -2px 4px #000,
+    2px -2px 4px #000,
+    -2px 2px 4px #000,
+    0 4px 10px #000;
+  white-space: nowrap;
+}
+
+#bp-1 { left: 0; }
+#bp-2 { left: 141px; }
+#bp-3 { left: 282px; }
+#bp-4 { left: 423px; }
+#bp-5 { left: 564px; }
+#rp-1 { right: 0; }
+#rp-2 { right: 141px; }
+#rp-3 { right: 282px; }
+#rp-4 { right: 423px; }
+#rp-5 { right: 564px; }
+
+/* ── Bans ───────────────────────────────────────────────────────────── */
+.ban-slot {
+  position: absolute;
+  top: 745px;
+  width: 70px;
+  height: 70px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: 4px;
+}
+
+.ban-slot img {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.6;
+}
+
+#bb-1 { left: 312px; }
+#bb-2 { left: 392px; }
+#bb-3 { left: 472px; }
+#bb-4 { left: 552px; }
+#rb-1 { right: 312px; }
+#rb-2 { right: 392px; }
+#rb-3 { right: 472px; }
+#rb-4 { right: 552px; }
+
+/* ── Global bans ────────────────────────────────────────────────────── */
+.global-bp-container {
+  position: absolute;
+  top: 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: gbp-in 0.6s ease-out both;
+}
+
+.global-bp-container.blue {
+  left: 40px;
+  align-items: flex-start;
+}
+
+.global-bp-container.red {
+  right: 40px;
+  align-items: flex-end;
+}
+
+@keyframes gbp-in {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: none; }
+}
+
+.global-bp-heroes {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.global-bp-slot {
+  width: 50px;
+  height: 50px;
+  overflow: hidden;
+  border: 2px solid #555;
+  border-radius: 4px;
+  background: rgb(0 0 0 / 80%);
+}
+
+.global-bp-slot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(80%);
+  opacity: 0.7;
+}
+
+/* ── Entry and exit ─────────────────────────────────────────────────── */
+.draft-in-anim {
+  animation: draft-zoom-fade 0.8s ease-in-out forwards;
+}
+
+.slide-left-out {
+  animation: draft-slide-left 0.5s ease-in-out forwards;
+}
+
+.slide-right-out {
+  animation: draft-slide-right 0.5s ease-in-out forwards;
+}
+
+.slide-down-out {
+  animation: draft-slide-down 0.8s ease-in-out forwards;
+}
+
+@keyframes draft-zoom-fade {
+  0% { transform: scale(1.1); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes draft-slide-down {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(1080px); opacity: 0; }
+}
+
+@keyframes draft-slide-left {
+  0% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(-1920px); opacity: 0; }
+}
+
+@keyframes draft-slide-right {
+  0% { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(1920px); opacity: 0; }
+}
+
+/* ── The step highlight ─────────────────────────────────────────────── */
+@keyframes pulse-blue {
+  0%, 100% { box-shadow: inset 0 0 10px #00e5ff, 0 0 15px #00e5ff; border-color: #00e5ff; }
+  50% { box-shadow: inset 0 0 30px #00e5ff, 0 0 30px #00e5ff; border-color: #fff; }
+}
+
+@keyframes pulse-red {
+  0%, 100% { box-shadow: inset 0 0 10px #ff0055, 0 0 15px #ff0055; border-color: #ff0055; }
+  50% { box-shadow: inset 0 0 30px #ff0055, 0 0 30px #ff0055; border-color: #fff; }
+}
+
+.slot-active.blue .image-mask,
+.slot-active.blue.ban-slot {
+  z-index: 10;
+  transform: scale(1.03);
+  animation: pulse-blue 1.2s infinite;
+}
+
+.slot-active.red .image-mask,
+.slot-active.red.ban-slot {
+  z-index: 10;
+  transform: scale(1.03);
+  animation: pulse-red 1.2s infinite;
+}
+
+.action-text {
+  position: absolute;
+  z-index: 5;
+  width: 100%;
+  font-weight: bold;
+  text-align: center;
+  text-shadow: 2px 2px 4px #000;
+  opacity: 0;
+}
+
+.pick-slot .action-text {
+  top: 75px;
+  font-size: 22px;
+  letter-spacing: 1px;
+  color: #fff;
+}
+
+.pick-slot.slot-active.empty .action-text {
+  opacity: 1;
+}
+
+.ban-slot .action-text {
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 16px;
+  color: #fff;
+}
+
+.ban-slot.slot-active.empty .action-text {
+  animation: text-pulse 1s infinite;
+}
+
+@keyframes text-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; transform: translateY(-50%) scale(1.1); }
+}
+
+.arrows-container {
+  position: absolute;
+  bottom: 30%;
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateX(-50%);
+  opacity: 0;
+}
+
+.pick-slot.slot-active.empty .arrows-container {
+  opacity: 1;
+}
+
+.arrow {
+  width: 20px;
+  height: 20px;
+  margin-bottom: -10px;
+  border-right: 4px solid;
+  border-bottom: 4px solid;
+  opacity: 0;
+  animation: arrow-run-down 1.2s infinite ease-in-out;
+}
+
+.blue .arrow {
+  border-color: #00e5ff;
+  filter: drop-shadow(0 0 5px #00e5ff);
+}
+
+.red .arrow {
+  border-color: #ff0055;
+  filter: drop-shadow(0 0 5px #ff0055);
+}
+
+.arrow:nth-child(1) { animation-delay: 0s; }
+.arrow:nth-child(2) { animation-delay: 0.2s; }
+.arrow:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes arrow-run-down {
+  0% { opacity: 0; transform: translateY(-15px) rotate(45deg); }
+  50% { opacity: 1; transform: translateY(0) rotate(45deg); }
+  100% { opacity: 0; transform: translateY(15px) rotate(45deg); }
+}
+
+/* ── Lock-in ────────────────────────────────────────────────────────── */
+.flash-fx {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 4;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  opacity: 0;
+  animation: flash-anim 0.5s ease-out forwards;
+}
+
+@keyframes flash-anim {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes zoom-fade-pick {
+  0% { transform: scale(1.4); opacity: 0; filter: brightness(2); }
+  100% { transform: scale(1); opacity: 0.9; filter: brightness(1); }
+}
+
+@keyframes zoom-fade-ban {
+  0% { transform: scale(1.4); opacity: 0; filter: brightness(2); }
+  100% { transform: scale(1); opacity: 0.6; filter: brightness(1); }
+}
+
+.pick-slot .hero-img {
+  animation: zoom-fade-pick 0.4s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}
+
+.ban-slot img {
+  animation: zoom-fade-ban 0.4s cubic-bezier(0.1, 0.9, 0.2, 1) forwards;
+}

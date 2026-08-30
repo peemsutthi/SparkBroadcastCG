@@ -1,0 +1,1600 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        body { 
+            font-family: Arial; 
+            padding: 20px; 
+            background: #222; 
+            color: white; 
+            padding-bottom: 60px; 
+        }
+
+        /* --- NAVIGATION TABS --- */
+        .nav-tabs { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 20px; 
+            border-bottom: 2px solid #555; 
+            padding-bottom: 10px; 
+        }
+        
+        .nav-btn { 
+            background: #444; 
+            color: white; 
+            border: none; 
+            padding: 12px 24px; 
+            cursor: pointer; 
+            font-size: 18px; 
+            border-radius: 5px 5px 0 0; 
+        }
+        
+        .nav-btn.active { 
+            background: #00ffcc; 
+            color: black; 
+            font-weight: bold; 
+        }
+        
+        .page { display: none; } 
+        .page.active { display: block; }
+        
+        /* --- PANELS & UI BOXES --- */
+        .panel { 
+            background: #333; 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            border-radius: 8px; 
+            border-left: 5px solid #00ffcc; 
+        }
+        
+        .upload-panel { border-left: 5px solid #ffcc00; } 
+        .global-panel { border-left: 5px solid #ff55aa; background: #2a2a2a; } 
+        .project-panel { border-left: 5px solid #007bff; background: #2a2a2a; } 
+        .links-panel { border-left: 5px solid #17a2b8; background: #2a2a2a; } 
+        .timer-panel { border-left: 5px solid #e83e8c; background: #2a2a2a; } 
+        .draft-panel { border-left: 5px solid #a200ff; background: #2a2a2a; }
+        .bracket-panel { border-left: 5px solid #ff5500; background: #2a2a2a; }
+        .stats-panel { border-left: 5px solid #00ffcc; background: #2a2a2a; }
+        
+        .setup-list-panel { 
+            border-left: 5px solid #888; 
+            background: #2a2a2a; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        
+        .panel-header { 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            background: #444; 
+            padding: 10px; 
+            border-radius: 5px; 
+            margin: -5px; 
+        } 
+        
+        .panel-header:hover { background: #555; } 
+        
+        .chevron { 
+            margin-right: 10px; 
+            transition: transform 0.2s; 
+            font-size: 14px; 
+        } 
+        
+        .chevron.open { transform: rotate(90deg); } 
+        
+        .panel-body { 
+            padding: 15px; 
+            background: #252525; 
+            border-radius: 5px; 
+            margin-top: 15px; 
+            display: none; 
+            border: 1px solid #444; 
+        }
+        
+        /* --- INPUTS & BUTTONS --- */
+        input, select, button { 
+            padding: 10px; 
+            margin: 5px; 
+            font-size: 16px; 
+        } 
+        
+        input[type="text"], 
+        input[type="number"], 
+        input[type="password"] { 
+            background: #111; 
+            color: white; 
+            border: 1px solid #555; 
+            border-radius: 4px; 
+        }
+        
+        button.play { background: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; } 
+        button.pause { background: #ffc107; color: black; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; } 
+        button.out { background: #fd7e14; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; } 
+        button.panic { background: #dc3545; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; } 
+        button.upload { background: #ffcc00; color: black; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; } 
+        button.font-btn { background: #ff55aa; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; } 
+        button.sys-font-btn { background: #888; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; } 
+        button.project-btn { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; } 
+        button.combine-btn { background: #17a2b8; color: white; border: none; cursor: pointer; font-weight: bold; border-radius: 4px; } 
+        button.add-btn { background: #6c757d; color: white; border: none; cursor: pointer; border-radius: 4px; } 
+        
+        button.copy-btn { 
+            background: #555; color: white; border: none; cursor: pointer; border-radius: 4px; font-size: 14px; padding: 8px 12px; 
+        } 
+        button.copy-btn:hover { background: #00ffcc; color: black; } 
+        
+        button.remove-btn { 
+            background: #555; color: white; border: none; cursor: pointer; padding: 5px 10px; font-size: 14px; border-radius: 4px; 
+        } 
+        button.remove-btn:hover { background: #ff3333; }
+        
+        .output-link-input { 
+            flex: 1; background: #111; color: #00ffcc; border: 1px solid #555; padding: 8px; font-family: monospace; font-size: 14px; border-radius: 4px; 
+        }
+        
+        /* --- TELEMETRY STATUS BAR --- */
+        .status-bar { 
+            position: fixed; bottom: 0; left: 0; right: 0; background: #111; border-top: 2px solid #444; padding: 10px 20px; display: flex; gap: 20px; font-family: monospace; font-size: 14px; z-index: 9999; align-items: center; 
+        } 
+        .status-item { background: #222; padding: 6px 12px; border-radius: 4px; border: 1px solid #333; color: #aaa; } 
+        .status-sys { color: #ff55aa; font-weight: bold; border-color: #ff55aa; }
+        
+        /* --- DRAFT SPECIFIC STYLES --- */
+        .draft-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; } 
+        .draft-team-box { background: #222; padding: 15px; border-radius: 8px; border: 1px solid #444; } 
+        .draft-team-box.blue { border-top: 5px solid #00e5ff; } 
+        .draft-team-box.red { border-top: 5px solid #ff0055; } 
+        
+        /* Player/Hero Input Layout */
+        .player-row { display: flex; gap: 5px; margin-bottom: 5px; align-items: center; }
+        .player-input { width: 40%; box-sizing: border-box; margin: 0; border-color: #555; }
+        .hero-input { width: 60%; box-sizing: border-box; margin: 0; }
+        
+        .draft-team-box.blue .player-input { border-left: 3px solid #00e5ff; }
+        .draft-team-box.red .player-input { border-left: 3px solid #ff0055; }
+
+        .ban-input { width: 80%; margin-bottom: 10px; }
+
+        .step-btn { 
+            width: 100%; padding: 20px; font-size: 24px; background: #a200ff; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 20px; transition: background 0.3s;
+        } 
+        .step-btn:hover { background: #8100cc; }
+        
+        /* --- GLOBAL BP Grid System --- */
+        .global-bp-grid { display: grid; grid-template-columns: 35px repeat(5, 1fr); gap: 5px; margin-bottom: 8px; }
+        .global-bp-grid label { color: #aaa; align-self: center; font-weight: bold; font-size: 14px; }
+        .global-bp-input { width: 100%; box-sizing: border-box; margin: 0 !important; padding: 6px !important; background: #0a0a0a !important; color: #00ffcc !important; font-size: 12px !important; border: 1px solid #444 !important; text-align: center; }
+        
+        /* Hero Swap Box */
+        .swap-box { background: #111; padding: 10px; border-radius: 4px; display: flex; align-items: center; gap: 10px; margin-bottom: 15px; border: 1px solid #444; }
+        .swap-box select { padding: 5px; font-size: 14px; margin: 0; width: 60px; background: #222; color: #fff; border: 1px solid #555; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <datalist id="heroes-list"></datalist>
+    <datalist id="teams-list"></datalist>
+    <datalist id="players-list"></datalist>
+
+    <div class="nav-tabs">
+        <button class="nav-btn active" id="setup-tab" onclick="switchTab('setup')">⚙️ SETUP</button>
+        <button class="nav-btn" id="rundown-tab" onclick="switchTab('rundown')">📋 RUNDOWN</button>
+        <button class="nav-btn" id="countdown-tab" onclick="switchTab('countdown')">⏱️ TIMER</button>
+        <button class="nav-btn" id="draft-tab" onclick="switchTab('draft')">🎮 DRAFT/BAN</button>
+        <button class="nav-btn" id="bracket-tab" onclick="switchTab('bracket')">🏆 BRACKET</button>
+    </div>
+
+    <div id="setup-page" class="page active">
+        <div style="display:flex; gap:20px;">
+            <div style="flex: 1;">
+                
+                <div class="panel links-panel">
+                    <h3 style="margin-top:0;">🔗 Output Links</h3>
+                    <div id="output-links-container"></div>
+                </div>
+                
+                <div class="panel project-panel">
+                    <h3>📂 Project</h3>
+                    <input type="text" id="saveProjectName" placeholder="e.g. morning_show"> 
+                    <button class="project-btn" onclick="saveProject()">💾 Save</button><br>
+                    <select id="loadProjectSelect">
+                        <option value="">-- Select --</option>
+                    </select> 
+                    <button class="project-btn" onclick="loadProject(false)">📂 Load</button> 
+                    <button class="combine-btn" onclick="loadProject(true)">➕ Combine</button>
+                    <span id="projectStatus" style="color:#00ffcc;"></span>
+                </div>
+                
+                <div class="panel global-panel">
+                    <h3>1. Global Typography</h3>
+                    <div style="background: #222; padding: 10px; margin-bottom: 10px; border-radius: 5px;">
+                        <button class="sys-font-btn" onclick="fetchSystemFonts()">💻 Load OS Fonts</button><br><br>
+                        <input type="file" id="fontInput" accept=".ttf,.otf,.woff,.woff2"> 
+                        <button class="font-btn" onclick="uploadCustomFont()">Upload File</button>
+                        <span id="fontStatus" style="color:#00ffcc;"></span>
+                    </div>
+                    <label>Title:</label>
+                    <select id="globalTitleFont" class="font-dropdown"></select>
+                    <label>Sub:</label>
+                    <select id="globalSubFont" class="font-dropdown"></select>
+                    <label>Body:</label>
+                    <select id="globalContentFont" class="font-dropdown"></select>
+                </div>
+
+                <div class="panel stats-panel">
+                    <h3>📊 2. Hero Stats Database</h3>
+                    <p style="color:#aaa; font-size:12px; margin-top:0;">Format: Col A = Hero Name | Col B = P/B% | Col C = Win Rate%</p>
+                    <div style="background: #222; padding: 10px; border-radius: 5px;">
+                        <label>Google Sheet (Published CSV URL):</label><br>
+                        <input type="text" id="g-sheet-url" placeholder="https://docs.google.com/spreadsheets/.../pub?output=csv" style="width: 80%;">
+                        <button class="project-btn" onclick="fetchGoogleSheet()">Load Link</button>
+                        
+                        <hr style="border:1px solid #444; margin: 15px 0;">
+                        
+                        <label>Or Local Excel File (.xlsx, .csv):</label><br>
+                        <input type="file" id="excel-file" accept=".xlsx, .xls, .csv">
+                        <button class="font-btn" onclick="loadExcelFile()">Load File</button>
+                    </div>
+                    <span id="db-status" style="color:#00ffcc; font-weight:bold; margin-top:10px; display:block;">Database: Empty (Stats hidden)</span>
+                </div>
+                
+                <div class="panel upload-panel">
+                    <h3>3. Upload Graphic</h3>
+                    <input type="text" id="newGraphicName" placeholder="Name (e.g. bug)">
+                    <select id="templateType">
+                        <option value="none">Animation Only</option>
+                        <option value="l3_basic">Basic L3</option>
+                        <option value="l3_caster">Caster Duo</option>
+                    </select>
+                    <div style="background: #222; padding: 10px; margin-top: 10px; border-radius: 5px;">
+                        <strong style="color: #ffcc00;">IN Asset</strong><br>
+                        <select id="assetTypeSelect" onchange="toggleInputType('in')">
+                            <option value="png">PNG Folder</option>
+                            <option value="webm">WebM File</option>
+                        </select><br>
+                        <input type="file" id="folderInput" webkitdirectory directory multiple>
+                        <input type="file" id="fileInput" accept=".webm" style="display:none;">
+                        
+                        <hr style="border:1px solid #444; margin: 15px 0;">
+                        
+                        <strong style="color: #00ffcc;">LOOP Asset (Opt)</strong><br>
+                        <select id="loopAssetTypeSelect" onchange="toggleInputType('loop')">
+                            <option value="png">PNG Folder</option>
+                            <option value="webm">WebM File</option>
+                        </select><br>
+                        <input type="file" id="loopFolderInput" webkitdirectory directory multiple>
+                        <input type="file" id="loopFileInput" accept=".webm" style="display:none;">
+                    </div>
+                    <button class="upload" onclick="uploadSequence()" style="margin-top: 15px;">Upload</button>
+                    <span id="uploadStatus"></span>
+                </div>
+                
+            </div>
+            
+            <div style="flex: 1;">
+                <div class="panel" style="background: transparent; border: none; padding: 0;">
+                    <h3>Session Assets:</h3>
+                    <div id="setup-graphics-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="rundown-page" class="page">
+        <div id="rundown-graphics-list"></div>
+    </div>
+
+    <div id="countdown-page" class="page">
+        <div class="panel timer-panel">
+            <h2>⏱️ Event Timer</h2>
+            <div style="display: flex; gap: 40px; margin-bottom: 20px; background: #333; padding: 20px; border-radius: 8px;">
+                <div>
+                    <h3>Time</h3>
+                    <label>Min:</label><input type="number" id="cd-min" value="5" style="width:80px;"><br>
+                    <label>Sec:</label><input type="number" id="cd-sec" value="0" style="width:80px;">
+                </div>
+                <div style="border-left: 1px solid #555; padding-left: 40px;">
+                    <h3>Settings</h3>
+                    <select id="cd-pos" onchange="toggleCustomTimerPos()">
+                        <option value="center">Center</option>
+                        <option value="top-left">Top L</option>
+                        <option value="top-right">Top R</option>
+                        <option value="bottom-left">Bot L</option>
+                        <option value="bottom-right">Bot R</option>
+                        <option value="top-center">Top C</option>
+                        <option value="bottom-center">Bot C</option>
+                        <option value="custom">Custom (X, Y)</option>
+                    </select><br>
+                    <div id="cd-custom-coords" style="display:none;">
+                        <label>X:</label><input type="number" id="cd-x" value="100" style="width:70px;">
+                        <label>Y:</label><input type="number" id="cd-y" value="100" style="width:70px;">
+                    </div>
+                    <select id="cd-font" class="font-dropdown"></select>
+                    <input type="number" id="cd-size" value="150" style="width:80px;">
+                    <input type="color" id="cd-color" value="#ffffff"><br><br>
+                    <input type="checkbox" id="cd-shadow" checked> Drop Shadow | 
+                    <input type="checkbox" id="cd-soon" checked> "SOON" at 00:00
+                </div>
+            </div>
+            <div style="background: #252525; padding: 20px; border-radius: 8px; border: 1px solid #444;">
+                <select id="cd-channel">
+                    <option value="1">Out 1</option>
+                    <option value="2">Out 2</option>
+                    <option value="3">Out 3</option>
+                    <option value="4">Out 4</option>
+                </select>
+                <button class="play" onclick="triggerTimer('start')">▶ START</button>
+                <button class="pause" onclick="triggerTimer('pause')">⏸ PAUSE</button>
+                <button class="play" onclick="triggerTimer('resume')">⏯ RESUME</button>
+                <button class="panic" onclick="triggerTimer('stop')">⏹ CLEAR</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="draft-page" class="page">
+        <div class="panel draft-panel">
+            <h2>🎮 RPL Draft / Ban Overlay</h2>
+            <div style="background: #222; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 20px; border: 1px solid #444;">
+                <div>
+                    <label>Match Name:</label><br>
+                    <input type="text" id="draft-match" value="Grand Final">
+                </div>
+                <div>
+                    <label>Game #:</label><br>
+                    <input type="text" id="draft-game" value="Game 1">
+                </div>
+                <div style="margin-left: auto; text-align:right;">
+                    <label>Target Output Channel:</label>
+                    <select id="draft-channel">
+                        <option value="1">Output 1</option>
+                        <option value="2">Output 2</option>
+                        <option value="3">Output 3</option>
+                        <option value="4">Output 4</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="draft-grid">
+                <div class="draft-team-box blue">
+                    <h3 style="color:#00e5ff; margin-top:0;">🔵 Blue Team</h3>
+                    <div style="display:flex; gap:10px; margin-bottom: 20px;">
+                        <div>
+                            <label>Team Name (Logo file):</label><br>
+                            <input type="text" id="draft-blue-name" placeholder="e.g. talon" list="teams-list">
+                        </div>
+                        <div>
+                            <label>Score:</label><br>
+                            <input type="number" id="draft-blue-score" value="0" style="width:60px;">
+                        </div>
+                    </div>
+                    
+                    <strong>Players & Picks (1-5):</strong><br>
+                    <div class="player-row">
+                        <input type="text" class="player-input" id="bpl-1" placeholder="Player 1" list="players-list">
+                        <input type="text" class="hero-input" id="bp-1" placeholder="Pick 1" list="heroes-list">
+                    </div>
+                    <div class="player-row">
+                        <input type="text" class="player-input" id="bpl-2" placeholder="Player 2" list="players-list">
+                        <input type="text" class="hero-input" id="bp-2" placeholder="Pick 2" list="heroes-list">
+                    </div>
+                    <div class="player-row">
+                        <input type="text" class="player-input" id="bpl-3" placeholder="Player 3" list="players-list">
+                        <input type="text" class="hero-input" id="bp-3" placeholder="Pick 3" list="heroes-list">
+                    </div>
+                    <div class="player-row">
+                        <input type="text" class="player-input" id="bpl-4" placeholder="Player 4" list="players-list">
+                        <input type="text" class="hero-input" id="bp-4" placeholder="Pick 4" list="heroes-list">
+                    </div>
+                    <div class="player-row" style="margin-bottom: 15px;">
+                        <input type="text" class="player-input" id="bpl-5" placeholder="Player 5" list="players-list">
+                        <input type="text" class="hero-input" id="bp-5" placeholder="Pick 5" list="heroes-list">
+                    </div>
+                    
+                    <div class="swap-box">
+                        <span style="color:#aaa; font-size:14px;">Swap Heroes:</span>
+                        <select id="swap-b1">
+                            <option value="1">P1</option><option value="2">P2</option>
+                            <option value="3">P3</option><option value="4">P4</option><option value="5">P5</option>
+                        </select>
+                        <span style="color:#aaa;">↔</span>
+                        <select id="swap-b2">
+                            <option value="1">P1</option><option value="2">P2</option>
+                            <option value="3">P3</option><option value="4">P4</option><option value="5" selected>P5</option>
+                        </select>
+                        <button class="copy-btn" style="margin:0;" onclick="swapHero('blue')">Execute Swap</button>
+                    </div>
+                    
+                    <strong>Bans (1-4):</strong><br>
+                    <input type="text" class="ban-input hero-input" id="bb-1" placeholder="Ban 1" list="heroes-list"><br>
+                    <input type="text" class="ban-input hero-input" id="bb-2" placeholder="Ban 2" list="heroes-list"><br>
+                    <input type="text" class="ban-input hero-input" id="bb-3" placeholder="Ban 3" list="heroes-list"><br>
+                    <input type="text" class="ban-input hero-input" id="bb-4" placeholder="Ban 4" list="heroes-list"><br>
+
+                    <hr style="border: 1px solid #444; margin:20px 0;">
+                    <strong style="color:#aaa; display:block; margin-bottom:10px;">Global BP - Used Heroes</strong>
+                    
+                    <div class="global-bp-grid">
+                        <label>G1:</label>
+                        <input type="text" id="bbg-1-1" class="global-bp-input" list="heroes-list"><input type="text" id="bbg-1-2" class="global-bp-input" list="heroes-list"><input type="text" id="bbg-1-3" class="global-bp-input" list="heroes-list"><input type="text" id="bbg-1-4" class="global-bp-input" list="heroes-list"><input type="text" id="bbg-1-5" class="global-bp-input" list="heroes-list">
+                    </div>
+                    <div class="global-bp-grid">
+                        <label>G2:</label>
+                        <input type="text" id="bbg-2-1" class="global-bp-input" list="heroes-list"><input type="text" id="bbg-2-2" class="global-bp-input" list="heroes-list"><input type="text" id="bbg-2-3" class="global-bp-input" list="heroes-list"><input type="text" id="bbg-2-4" class="global-bp-input" list="heroes-list"><input type="text" id="bbg-2-5" class="global-bp-input" list="heroes-list">
+                    </div>
+                    <div class="global-bp-grid">
+                        <label>G3:</label>
+                        <input type="text" id="bbg-3-1" class="global-bp-input" list="heroes-list"><input type="text" id="bbg-3-2" class="global-bp-input" list="heroes-list"><input type="text" id="bbg-3-3" class="global-bp-input" list="heroes-list"><input type="text" id="bbg-3-4" class="global-bp-input" list="heroes-list"><input type="text" id="bbg-3-5" class="global-bp-input" list="heroes-list">
+                    </div>
+                    <div class="global-bp-grid">
+                        <label>G4:</label>
+                        <input type="text" id="bbg-4-1" class="global-bp-input" list="heroes-list"><input type="text" id="bbg-4-2" class="global-bp-input" list="heroes-list"><input type="text" id="bbg-4-3" class="global-bp-input" list="heroes-list"><input type="text" id="bbg-4-4" class="global-bp-input" list="heroes-list"><input type="text" id="bbg-4-5" class="global-bp-input" list="heroes-list">
+                    </div>
+                </div>
+
+                <div class="draft-team-box red">
+                    <h3 style="color:#ff0055; margin-top:0;">🔴 Red Team</h3>
+                    <div style="display:flex; gap:10px; margin-bottom: 20px;">
+                        <div>
+                            <label>Team Name (Logo file):</label><br>
+                            <input type="text" id="draft-red-name" placeholder="e.g. bacon" list="teams-list">
+                        </div>
+                        <div>
+                            <label>Score:</label><br>
+                            <input type="number" id="draft-red-score" value="0" style="width:60px;">
+                        </div>
+                    </div>
+                    
+                    <strong>Players & Picks (1-5):</strong><br>
+                    <div class="player-row">
+                        <input type="text" class="player-input" id="rpl-1" placeholder="Player 1" list="players-list">
+                        <input type="text" class="hero-input" id="rp-1" placeholder="Pick 1" list="heroes-list">
+                    </div>
+                    <div class="player-row">
+                        <input type="text" class="player-input" id="rpl-2" placeholder="Player 2" list="players-list">
+                        <input type="text" class="hero-input" id="rp-2" placeholder="Pick 2" list="heroes-list">
+                    </div>
+                    <div class="player-row">
+                        <input type="text" class="player-input" id="rpl-3" placeholder="Player 3" list="players-list">
+                        <input type="text" class="hero-input" id="rp-3" placeholder="Pick 3" list="heroes-list">
+                    </div>
+                    <div class="player-row">
+                        <input type="text" class="player-input" id="rpl-4" placeholder="Player 4" list="players-list">
+                        <input type="text" class="hero-input" id="rp-4" placeholder="Pick 4" list="heroes-list">
+                    </div>
+                    <div class="player-row" style="margin-bottom: 10px;">
+                        <input type="text" class="player-input" id="rpl-5" placeholder="Player 5" list="players-list">
+                        <input type="text" class="hero-input" id="rp-5" placeholder="Pick 5" list="heroes-list">
+                    </div>
+                    
+                    <div class="swap-box">
+                        <span style="color:#aaa; font-size:14px;">Swap Heroes:</span>
+                        <select id="swap-r1">
+                            <option value="1">P1</option><option value="2">P2</option>
+                            <option value="3">P3</option><option value="4">P4</option><option value="5">P5</option>
+                        </select>
+                        <span style="color:#aaa;">↔</span>
+                        <select id="swap-r2">
+                            <option value="1">P1</option><option value="2">P2</option>
+                            <option value="3">P3</option><option value="4">P4</option><option value="5" selected>P5</option>
+                        </select>
+                        <button class="copy-btn" style="margin:0;" onclick="swapHero('red')">Execute Swap</button>
+                    </div>
+                    
+                    <strong>Bans (1-4):</strong><br>
+                    <input type="text" class="ban-input hero-input" id="rb-1" placeholder="Ban 1" list="heroes-list"><br>
+                    <input type="text" class="ban-input hero-input" id="rb-2" placeholder="Ban 2" list="heroes-list"><br>
+                    <input type="text" class="ban-input hero-input" id="rb-3" placeholder="Ban 3" list="heroes-list"><br>
+                    <input type="text" class="ban-input hero-input" id="rb-4" placeholder="Ban 4" list="heroes-list"><br>
+
+                    <hr style="border: 1px solid #444; margin:20px 0;">
+                    <strong style="color:#aaa; display:block; margin-bottom:10px;">Global BP - Used Heroes</strong>
+                    
+                    <div class="global-bp-grid">
+                        <label>G1:</label>
+                        <input type="text" id="rbg-1-1" class="global-bp-input" list="heroes-list"><input type="text" id="rbg-1-2" class="global-bp-input" list="heroes-list"><input type="text" id="rbg-1-3" class="global-bp-input" list="heroes-list"><input type="text" id="rbg-1-4" class="global-bp-input" list="heroes-list"><input type="text" id="rbg-1-5" class="global-bp-input" list="heroes-list">
+                    </div>
+                    <div class="global-bp-grid">
+                        <label>G2:</label>
+                        <input type="text" id="rbg-2-1" class="global-bp-input" list="heroes-list"><input type="text" id="rbg-2-2" class="global-bp-input" list="heroes-list"><input type="text" id="rbg-2-3" class="global-bp-input" list="heroes-list"><input type="text" id="rbg-2-4" class="global-bp-input" list="heroes-list"><input type="text" id="rbg-2-5" class="global-bp-input" list="heroes-list">
+                    </div>
+                    <div class="global-bp-grid">
+                        <label>G3:</label>
+                        <input type="text" id="rbg-3-1" class="global-bp-input" list="heroes-list"><input type="text" id="rbg-3-2" class="global-bp-input" list="heroes-list"><input type="text" id="rbg-3-3" class="global-bp-input" list="heroes-list"><input type="text" id="rbg-3-4" class="global-bp-input" list="heroes-list"><input type="text" id="rbg-3-5" class="global-bp-input" list="heroes-list">
+                    </div>
+                    <div class="global-bp-grid">
+                        <label>G4:</label>
+                        <input type="text" id="rbg-4-1" class="global-bp-input" list="heroes-list"><input type="text" id="rbg-4-2" class="global-bp-input" list="heroes-list"><input type="text" id="rbg-4-3" class="global-bp-input" list="heroes-list"><input type="text" id="rbg-4-4" class="global-bp-input" list="heroes-list"><input type="text" id="rbg-4-5" class="global-bp-input" list="heroes-list">
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 20px; align-items: center;">
+                <button class="step-btn" id="draft-step-btn" onclick="advanceDraft()">▶ SHOW DRAFT (Step 0)</button>
+                <div style="display:flex; flex-direction:column; gap:10px; min-width: 200px;">
+                    <button class="combine-btn" style="padding: 15px;" onclick="swapTeams()">🔁 SWAP TEAMS (SIDES)</button>
+                    <button class="play" style="padding: 15px;" onclick="syncDraftOnly()">🔄 SYNC DATA (No Step)</button>
+                    <button class="out" style="padding: 15px;" onclick="clearPicksBans()">🧹 CLEAR PICKS/BANS</button>
+                    <button class="panic" style="padding: 15px;" onclick="resetDraft()">⏹ HIDE DRAFT</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="bracket-page" class="page">
+        <div class="panel bracket-panel">
+            <h2>🏆 Challonge Bracket Integration</h2>
+            
+            <div style="background: #222; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: flex; gap: 20px; border: 1px solid #444;">
+                <div>
+                    <label>Challonge API Key:</label><br>
+                    <input type="password" id="challonge-api" placeholder="Enter API Key">
+                </div>
+                <div>
+                    <label>Tournament URL/ID:</label><br>
+                    <input type="text" id="challonge-id" placeholder="e.g. my_smash_tourney">
+                </div>
+                <div>
+                    <label>Target Channel:</label><br>
+                    <select id="bracket-channel">
+                        <option value="1">Output 1</option>
+                        <option value="2">Output 2</option>
+                        <option value="3">Output 3</option>
+                        <option value="4">Output 4</option>
+                    </select>
+                </div>
+                <div style="align-self: flex-end;">
+                    <button class="project-btn" onclick="fetchChallonge()">⬇️ Fetch Bracket Data</button>
+                    <span id="challonge-status" style="margin-left: 10px; color: #ffcc00; font-weight: bold;"></span>
+                </div>
+            </div>
+
+            <div style="background: #2a2a2a; padding: 15px; border-radius: 8px; border-left: 5px solid #ffcc00; margin-bottom: 20px;">
+                <p><strong>Note:</strong> Double Elimination (16 Teams). 1st place in Upper, 2nd place in Lower. Lower Final and Grand Final are BO5. No bracket reset.</p>
+                <p style="color: #aaa;">Once you fetch the data, use the buttons below to trigger the graphic on the output channel.</p>
+            </div>
+
+            <div style="display: flex; gap: 15px;">
+                <button class="play" style="padding: 15px 30px; font-size: 18px;" onclick="triggerBracket('show')">▶ SHOW BRACKET</button>
+                <button class="out" style="padding: 15px 30px; font-size: 18px;" onclick="triggerBracket('hide')">⏹ HIDE BRACKET</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <strong style="color:white;">SYSTEM HEALTH:</strong>
+        <div class="status-item status-sys" id="sys-ram">SERVER RAM: -- / -- GB</div>
+        <div class="status-item" id="ch1-stat">CH 1: OFFLINE</div>
+        <div class="status-item" id="ch2-stat">CH 2: OFFLINE</div>
+        <div class="status-item" id="ch3-stat">CH 3: OFFLINE</div>
+        <div class="status-item" id="ch4-stat">CH 4: OFFLINE</div>
+    </div>
+
+    <script src="/socket.io.min.js"></script>
+    <script>
+        const socket = io(); 
+        let projectGraphics = []; 
+        let defaultFontsPopulated = false;
+        let lastFetchedBracketData = null;
+        
+        let statsDB = {};
+        
+        window.onload = () => { 
+            populateDefaultFonts(); 
+            fetchProjectList(); 
+            generateOutputLinks(); 
+            fetchAutocompleteData(); 
+        };
+
+        // --- HERO STATS DATABASE LOGIC ---
+        function processStatsData(dataArray) {
+            statsDB = {};
+            let count = 0;
+            
+            dataArray.forEach(row => {
+                if (row && row[0]) {
+                    const cleanName = row[0].toString().toLowerCase().replace(/\s+/g, '');
+                    statsDB[cleanName] = {
+                        pb: row[1] || '--%',
+                        wr: row[2] || '--%'
+                    };
+                    count++;
+                }
+            });
+            
+            document.getElementById('db-status').innerText = `Database: Loaded ${count} heroes successfully!`;
+            document.getElementById('db-status').style.color = "#00ffcc";
+        }
+
+        async function fetchGoogleSheet() {
+            const url = document.getElementById('g-sheet-url').value;
+            if(!url) return alert("Please enter a Google Sheet Published CSV URL.");
+            
+            document.getElementById('db-status').innerText = "Fetching...";
+            document.getElementById('db-status').style.color = "#ffcc00";
+            
+            try {
+                const res = await fetch(url);
+                if (!res.ok) throw new Error("Network response was not ok");
+                const csvText = await res.text();
+                
+                const rows = csvText.split('\n').map(row => row.split(','));
+                processStatsData(rows);
+            } catch(e) {
+                document.getElementById('db-status').innerText = "Error fetching CSV. Ensure the sheet is Published to Web as CSV.";
+                document.getElementById('db-status').style.color = "#ff3333";
+            }
+        }
+
+        function loadExcelFile() {
+            const fileInput = document.getElementById('excel-file');
+            if(!fileInput.files.length) return alert("Please select an Excel or CSV file.");
+            
+            document.getElementById('db-status').innerText = "Parsing File...";
+            document.getElementById('db-status').style.color = "#ffcc00";
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = e.target.result;
+                    const workbook = XLSX.read(data, {type: 'binary'});
+                    const firstSheet = workbook.SheetNames[0];
+                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheet], {header: 1});
+                    
+                    processStatsData(rows);
+                } catch(err) {
+                    document.getElementById('db-status').innerText = "Error parsing file. Must be valid XLSX/CSV.";
+                    document.getElementById('db-status').style.color = "#ff3333";
+                }
+            };
+            reader.readAsBinaryString(fileInput.files[0]);
+        }
+
+        // --- CHALLONGE API FETCH LOGIC ---
+        async function fetchChallonge() {
+            const apiKey = document.getElementById('challonge-api').value;
+            const tourneyId = document.getElementById('challonge-id').value;
+            
+            if(!apiKey || !tourneyId) {
+                return alert("Please provide both an API key and a Tournament ID.");
+            }
+
+            document.getElementById('challonge-status').innerText = "Fetching...";
+            document.getElementById('challonge-status').style.color = "#ffcc00";
+
+            try {
+                const res = await fetch(`/api/challonge?apiKey=${apiKey}&tournament=${tourneyId}`);
+                const data = await res.json();
+
+                if(data.error) {
+                    throw new Error(data.error);
+                }
+
+                const participants = {};
+                data.participants.forEach(p => {
+                    participants[p.participant.id] = p.participant.name;
+                });
+
+                lastFetchedBracketData = {
+                    matches: data.matches,
+                    participants: participants
+                };
+
+                document.getElementById('challonge-status').innerText = `✅ Fetched ${data.matches.length} matches!`;
+                document.getElementById('challonge-status').style.color = "#00ffcc";
+
+            } catch(e) {
+                document.getElementById('challonge-status').innerText = "❌ Error fetching data.";
+                document.getElementById('challonge-status').style.color = "#ff3333";
+                console.error(e);
+            }
+        }
+
+        function triggerBracket(action) {
+            const channel = parseInt(document.getElementById('bracket-channel').value);
+            
+            if (action === 'show' && !lastFetchedBracketData) {
+                return alert("Please fetch the bracket data first!");
+            }
+
+            const fontRaw = document.getElementById('globalTitleFont').value;
+
+            socket.emit('control-command', {
+                type: 'bracket',
+                channel: channel,
+                action: action,
+                data: lastFetchedBracketData,
+                fontRaw: fontRaw
+            });
+        }
+
+        // --- FETCH AUTOCOMPLETE DATA ---
+        async function fetchAutocompleteData() {
+            try {
+                const res = await fetch('/api/autocomplete');
+                const data = await res.json();
+                
+                const populateDataList = (id, listArray) => {
+                    const dl = document.getElementById(id);
+                    if (!dl) return;
+                    dl.innerHTML = '';
+                    listArray.forEach(name => {
+                        const opt = document.createElement('option');
+                        opt.value = name;
+                        dl.appendChild(opt);
+                    });
+                };
+
+                // Map heroes to all hero-related inputs
+                populateDataList('heroes-list', data.heroes);
+                // Map teams and players to their respective lists
+                populateDataList('teams-list', data.teams);
+                populateDataList('players-list', data.players);
+            } catch (err) {
+                console.error("Failed to load autocomplete data. Ensure the Node server is running with the updated /api/autocomplete route.");
+            }
+        }
+
+        // --- TELEMETRY ---
+        socket.on('server-telemetry', data => { 
+            document.getElementById('sys-ram').innerText = `SERVER RAM: ${data.used} / ${data.total} GB`; 
+        });
+        
+        const channelTimeouts = {}; 
+        
+        socket.on('telemetry-update', data => { 
+            const el = document.getElementById(`ch${data.channel}-stat`); 
+            if (el) { 
+                let fpsColor = data.fps >= 55 ? '#00ffcc' : (data.fps >= 40 ? '#ffcc00' : '#ff3333'); 
+                
+                el.style.color = '#fff'; 
+                el.style.borderColor = fpsColor; 
+                el.innerHTML = `CH ${data.channel}: <span style="color:${fpsColor}; font-weight:bold;">${data.fps} FPS</span> | ${data.ram} MB`; 
+                
+                clearTimeout(channelTimeouts[data.channel]); 
+                channelTimeouts[data.channel] = setTimeout(() => { 
+                    el.style.color = '#aaa'; 
+                    el.style.borderColor = '#333'; 
+                    el.innerHTML = `CH ${data.channel}: OFFLINE`; 
+                }, 3000); 
+            } 
+        });
+
+        // --- DRAFT LOGIC ---
+        let currentDraftStep = 0;
+        
+        function getGlobalArr(prefix, game) {
+            return [1, 2, 3, 4, 5]
+                .map(i => document.getElementById(`${prefix}-${game}-${i}`).value)
+                .filter(val => val.trim().length > 0);
+        }
+
+        function getStatsForPicks(picksArray) {
+            return picksArray.map(hero => {
+                const cleanName = hero ? hero.toLowerCase().replace(/\s+/g, '') : '';
+                if (cleanName && statsDB[cleanName]) {
+                    return statsDB[cleanName];
+                }
+                return { pb: '--%', wr: '--%' };
+            });
+        }
+
+        function getDraftState() {
+            const bluePicksArr = [ 
+                document.getElementById('bp-1').value, document.getElementById('bp-2').value, 
+                document.getElementById('bp-3').value, document.getElementById('bp-4').value, document.getElementById('bp-5').value 
+            ];
+            
+            const redPicksArr = [ 
+                document.getElementById('rp-1').value, document.getElementById('rp-2').value, 
+                document.getElementById('rp-3').value, document.getElementById('rp-4').value, document.getElementById('rp-5').value 
+            ];
+            
+            return {
+                step: currentDraftStep,
+                matchName: document.getElementById('draft-match').value,
+                gameNum: document.getElementById('draft-game').value,
+                blueTeam: document.getElementById('draft-blue-name').value,
+                redTeam: document.getElementById('draft-red-name').value,
+                blueScore: document.getElementById('draft-blue-score').value,
+                redScore: document.getElementById('draft-red-score').value,
+                
+                bluePlayers: [
+                    document.getElementById('bpl-1').value, document.getElementById('bpl-2').value,
+                    document.getElementById('bpl-3').value, document.getElementById('bpl-4').value, document.getElementById('bpl-5').value
+                ],
+                redPlayers: [
+                    document.getElementById('rpl-1').value, document.getElementById('rpl-2').value,
+                    document.getElementById('rpl-3').value, document.getElementById('rpl-4').value, document.getElementById('rpl-5').value
+                ],
+                
+                bluePicks: bluePicksArr,
+                redPicks: redPicksArr,
+                
+                bluePickStats: getStatsForPicks(bluePicksArr),
+                redPickStats: getStatsForPicks(redPicksArr),
+                
+                blueBans: [ 
+                    document.getElementById('bb-1').value, document.getElementById('bb-2').value, 
+                    document.getElementById('bb-3').value, document.getElementById('bb-4').value 
+                ],
+                redBans: [ 
+                    document.getElementById('rb-1').value, document.getElementById('rb-2').value, 
+                    document.getElementById('rb-3').value, document.getElementById('rb-4').value 
+                ],
+                
+                blueUsed: [ getGlobalArr('bbg', 1), getGlobalArr('bbg', 2), getGlobalArr('bbg', 3), getGlobalArr('bbg', 4) ],
+                redUsed: [ getGlobalArr('rbg', 1), getGlobalArr('rbg', 2), getGlobalArr('rbg', 3), getGlobalArr('rbg', 4) ]
+            };
+        }
+
+        function emitDraft(action) {
+            const channel = parseInt(document.getElementById('draft-channel').value);
+            const draftFont = document.getElementById('globalTitleFont').value; 
+            
+            socket.emit('control-command', { 
+                type: 'draft', 
+                channel: channel, 
+                action: action, 
+                state: getDraftState(), 
+                fontRaw: draftFont 
+            });
+        }
+
+        function syncDraftOnly() { 
+            emitDraft('show'); 
+        }
+
+        function advanceDraft() {
+            const btn = document.getElementById('draft-step-btn');
+            
+            if (currentDraftStep === 17) { 
+                resetDraft(); 
+                return; 
+            }
+            
+            currentDraftStep++; 
+            emitDraft('show');
+            
+            if (currentDraftStep <= 15) { 
+                btn.innerText = `▶ NEXT PHASE (Step ${currentDraftStep} / 15)`; 
+                btn.style.background = '#a200ff';
+            } else if (currentDraftStep === 16) {
+                btn.innerText = `▶ ENTER SWAP PHASE (Step 16)`; 
+                btn.style.background = '#e83e8c'; 
+            } else { 
+                btn.innerText = `⏹ DRAFT COMPLETE (Click to Hide)`; 
+                btn.style.background = '#28a745'; 
+            }
+        }
+
+        function resetDraft() {
+            currentDraftStep = 0; 
+            const btn = document.getElementById('draft-step-btn'); 
+            
+            btn.innerText = `▶ SHOW DRAFT (Step 0)`; 
+            btn.style.background = '#a200ff'; 
+            
+            emitDraft('hide');
+        }
+
+        function clearPicksBans() {
+            if(!confirm("Clear all current picks and bans?")) return;
+            
+            document.querySelectorAll('.hero-input').forEach(i => i.value = '');
+            
+            currentDraftStep = 0;
+            const btn = document.getElementById('draft-step-btn'); 
+            
+            btn.innerText = `▶ SHOW DRAFT (Step 0)`; 
+            btn.style.background = '#a200ff';
+        }
+
+        function swapHero(team) {
+            const prefix = team === 'blue' ? 'b' : 'r';
+            const s1 = document.getElementById(`swap-${prefix}1`).value;
+            const s2 = document.getElementById(`swap-${prefix}2`).value;
+            
+            if (s1 === s2) return;
+            
+            const input1 = document.getElementById(`${prefix}p-${s1}`);
+            const input2 = document.getElementById(`${prefix}p-${s2}`);
+            
+            const temp = input1.value;
+            input1.value = input2.value;
+            input2.value = temp;
+            
+            if (currentDraftStep >= 15) {
+                syncDraftOnly();
+            }
+        }
+
+        function swapTeams() {
+            const blueName = document.getElementById('draft-blue-name').value;
+            const redName = document.getElementById('draft-red-name').value;
+            document.getElementById('draft-blue-name').value = redName;
+            document.getElementById('draft-red-name').value = blueName;
+
+            const blueScore = document.getElementById('draft-blue-score').value;
+            const redScore = document.getElementById('draft-red-score').value;
+            document.getElementById('draft-blue-score').value = redScore;
+            document.getElementById('draft-red-score').value = blueScore;
+
+            for (let i = 1; i <= 5; i++) {
+                const bPlayer = document.getElementById(`bpl-${i}`).value;
+                const rPlayer = document.getElementById(`rpl-${i}`).value;
+                document.getElementById(`bpl-${i}`).value = rPlayer;
+                document.getElementById(`rpl-${i}`).value = bPlayer;
+            }
+
+            for (let game = 1; game <= 4; game++) {
+                for (let slot = 1; slot <= 5; slot++) {
+                    const blueGlobalId = `bbg-${game}-${slot}`;
+                    const redGlobalId = `rbg-${game}-${slot}`;
+                    
+                    const blueGlobalVal = document.getElementById(blueGlobalId).value;
+                    const redGlobalVal = document.getElementById(redGlobalId).value;
+                    
+                    document.getElementById(blueGlobalId).value = redGlobalVal;
+                    document.getElementById(redGlobalId).value = blueGlobalVal;
+                }
+            }
+        }
+
+        // --- TYPOGRAPHY LOGIC ---
+        const standardWebFonts = [
+            "Arial", "Impact", "Helvetica", "Times New Roman", 
+            "Courier New", "Verdana", "Georgia", "Comic Sans MS", 
+            "Trebuchet MS", "Arial Black"
+        ];
+        
+        function populateDefaultFonts() { 
+            if (defaultFontsPopulated) return; 
+            
+            document.querySelectorAll('.font-dropdown').forEach(dd => { 
+                dd.innerHTML = ''; 
+                const optGroup = document.createElement('optgroup'); 
+                optGroup.label = "Standard Web Fonts"; 
+                
+                standardWebFonts.forEach(font => { 
+                    const opt = document.createElement('option'); 
+                    opt.value = font; 
+                    opt.innerText = font; 
+                    optGroup.appendChild(opt); 
+                }); 
+                
+                dd.appendChild(optGroup); 
+            }); 
+            
+            defaultFontsPopulated = true; 
+        }
+        
+        async function fetchSystemFonts() { 
+            if (!window.queryLocalFonts) return alert("Browser doesn't support this. Use standard web fonts or upload files."); 
+            
+            try { 
+                const fonts = await window.queryLocalFonts(); 
+                const uniqueFonts = [...new Set(fonts.map(f => f.family))].sort(); 
+                
+                document.querySelectorAll('.font-dropdown').forEach(dd => { 
+                    let optGroup = dd.querySelector('.sys-fonts-group'); 
+                    if (!optGroup) { 
+                        optGroup = document.createElement('optgroup'); 
+                        optGroup.label = "Local System OS Fonts"; 
+                        optGroup.className = "sys-fonts-group"; 
+                        dd.appendChild(optGroup); 
+                    } else { 
+                        optGroup.innerHTML = ''; 
+                    } 
+                    
+                    uniqueFonts.forEach(font => { 
+                        const opt = document.createElement('option'); 
+                        opt.value = font; 
+                        opt.innerText = font; 
+                        optGroup.appendChild(opt); 
+                    }); 
+                }); 
+                
+                alert(`Loaded ${uniqueFonts.length} system fonts!`); 
+            } catch (err) {
+                console.error("Failed to load local fonts", err);
+            } 
+        }
+        
+        async function uploadCustomFont() { 
+            const fontInput = document.getElementById('fontInput'); 
+            
+            if (fontInput.files.length === 0) return; 
+            
+            document.getElementById('fontStatus').innerText = "Uploading..."; 
+            const formData = new FormData(); 
+            formData.append('fontFile', fontInput.files[0]); 
+            
+            try { 
+                const response = await fetch('/upload-font', { method: 'POST', body: formData }); 
+                const result = await response.json(); 
+                
+                if (result.success) { 
+                    document.getElementById('fontStatus').innerText = "Success!"; 
+                    document.querySelectorAll('.font-dropdown').forEach(dd => { 
+                        let optGroup = dd.querySelector('.up-fonts-group'); 
+                        
+                        if (!optGroup) { 
+                            optGroup = document.createElement('optgroup'); 
+                            optGroup.label = "Uploaded Font Files"; 
+                            optGroup.className = "up-fonts-group"; 
+                            dd.appendChild(optGroup); 
+                        } 
+                        
+                        const opt = document.createElement('option'); 
+                        opt.value = result.fontName; 
+                        opt.innerText = result.fontName; 
+                        optGroup.appendChild(opt); 
+                    }); 
+                    
+                    fontInput.value = ''; 
+                } 
+            } catch (err) { 
+                document.getElementById('fontStatus').innerText = "Failed."; 
+            } 
+        }
+
+        // --- TIMER LOGIC ---
+        function toggleCustomTimerPos() { 
+            const pos = document.getElementById('cd-pos').value; 
+            document.getElementById('cd-custom-coords').style.display = pos === 'custom' ? 'block' : 'none'; 
+        }
+        
+        function triggerTimer(action, addedMs = 0) { 
+            const channel = parseInt(document.getElementById('cd-channel').value); 
+            const min = parseInt(document.getElementById('cd-min').value) || 0; 
+            const sec = parseInt(document.getElementById('cd-sec').value) || 0; 
+            
+            const settings = { 
+                size: document.getElementById('cd-size').value + 'px', 
+                color: document.getElementById('cd-color').value, 
+                fontRaw: document.getElementById('cd-font').value, 
+                position: document.getElementById('cd-pos').value, 
+                x: document.getElementById('cd-x').value, 
+                y: document.getElementById('cd-y').value, 
+                dropShadow: document.getElementById('cd-shadow').checked, 
+                showSoon: document.getElementById('cd-soon').checked 
+            }; 
+            
+            socket.emit('control-command', { 
+                type: 'countdown', 
+                channel, 
+                action, 
+                durationMs: (min * 60000) + (sec * 1000), 
+                addedMs, 
+                settings 
+            }); 
+        }
+
+        // --- UTILS & UI NAVIGATION ---
+        async function generateOutputLinks() { 
+            try { 
+                const res = await fetch('/api/ip'); 
+                const data = await res.json(); 
+                let linksHtml = ''; 
+                
+                for(let i = 1; i <= 4; i++) { 
+                    const url = `http://${data.ip}:${window.location.port || 3000}/output.html?channel=${i}`; 
+                    linksHtml += `
+                        <div style="display:flex; align-items:center; margin-bottom:8px;">
+                            <strong style="width:85px;">Channel ${i}:</strong>
+                            <input type="text" class="output-link-input" value="${url}" readonly id="link-ch${i}">
+                            <button class="copy-btn" onclick="copyLink('link-ch${i}')">📋 Copy</button>
+                        </div>`; 
+                } 
+                document.getElementById('output-links-container').innerHTML = linksHtml; 
+            } catch (e) {
+                console.error("Could not fetch IP for links.");
+            } 
+        }
+        
+        function copyLink(id) { 
+            const el = document.getElementById(id); 
+            el.select(); 
+            document.execCommand("copy"); 
+            
+            const bg = el.style.borderColor; 
+            el.style.borderColor = '#00ffcc'; 
+            
+            setTimeout(() => {
+                el.style.borderColor = bg;
+            }, 1000); 
+        }
+        
+        function switchTab(tabId) { 
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); 
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active')); 
+            
+            document.getElementById(tabId + '-page').classList.add('active'); 
+            document.getElementById(tabId + '-tab').classList.add('active'); 
+        }
+        
+        function togglePanel(folderName) { 
+            const body = document.getElementById(`body-${folderName}`); 
+            const chevron = document.getElementById(`chevron-${folderName}`); 
+            
+            if (body.style.display === 'none') { 
+                body.style.display = 'block'; 
+                chevron.classList.add('open'); 
+            } else { 
+                body.style.display = 'none'; 
+                chevron.classList.remove('open'); 
+            } 
+        }
+
+        // --- PROJECT SAVING & LOADING ---
+        async function fetchProjectList() { 
+            try { 
+                const res = await fetch('/api/projects'); 
+                const projects = await res.json(); 
+                const select = document.getElementById('loadProjectSelect'); 
+                
+                select.innerHTML = '<option value="">-- Select a Project --</option>'; 
+                
+                projects.forEach(p => { 
+                    select.innerHTML += `<option value="${p}">${p}</option>`; 
+                }); 
+            } catch (e) {
+                console.error("Could not load project list.");
+            } 
+        }
+        
+        async function saveProject() { 
+            const projName = document.getElementById('saveProjectName').value; 
+            if (!projName) return alert('Enter a project name to save.'); 
+            
+            const config = { 
+                globals: { 
+                    titleFont: document.getElementById('globalTitleFont').value, 
+                    subFont: document.getElementById('globalSubFont').value, 
+                    contentFont: document.getElementById('globalContentFont').value 
+                }, 
+                countdown: { 
+                    min: document.getElementById('cd-min').value, 
+                    sec: document.getElementById('cd-sec').value, 
+                    pos: document.getElementById('cd-pos').value, 
+                    x: document.getElementById('cd-x').value, 
+                    y: document.getElementById('cd-y').value, 
+                    size: document.getElementById('cd-size').value, 
+                    color: document.getElementById('cd-color').value, 
+                    font: document.getElementById('cd-font').value, 
+                    dropShadow: document.getElementById('cd-shadow').checked, 
+                    soon: document.getElementById('cd-soon').checked 
+                }, 
+                graphics: [] 
+            }; 
+            
+            for (const g of projectGraphics) { 
+                const f = g.folderName; 
+                const gData = { ...g, settings: {} }; 
+                
+                if (g.template !== 'none') { 
+                    gData.settings.size1 = document.getElementById(`size1-${f}`).value; 
+                    gData.settings.color1 = document.getElementById(`color1-${f}`).value; 
+                    gData.settings.size2 = document.getElementById(`size2-${f}`).value; 
+                    gData.settings.color2 = document.getElementById(`color2-${f}`).value; 
+                    gData.settings.dropShadow = document.getElementById(`shadow-${f}`).checked; 
+                    gData.settings.animSelect = document.getElementById(`animSelect-${f}`).value; 
+                    gData.settings.pngDelayIn = document.getElementById(`pngDelayIn-${f}`).value; 
+                    gData.settings.textDelayIn = document.getElementById(`textDelayIn-${f}`).value; 
+                    gData.settings.durationIn = document.getElementById(`durationIn-${f}`).value; 
+                    gData.settings.pngDelayOut = document.getElementById(`pngDelayOut-${f}`).value; 
+                    gData.settings.textDelayOut = document.getElementById(`textDelayOut-${f}`).value; 
+                    gData.settings.durationOut = document.getElementById(`durationOut-${f}`).value; 
+                } 
+                
+                config.graphics.push(gData); 
+            } 
+            
+            await fetch('/api/save', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ projectName: projName, data: config }) 
+            }); 
+            
+            document.getElementById('projectStatus').innerText = `✅ Saved!`; 
+            document.getElementById('saveProjectName').value = ''; 
+            
+            fetchProjectList(); 
+            
+            setTimeout(() => {
+                document.getElementById('projectStatus').innerText = '';
+            }, 3000); 
+        }
+        
+        async function loadProject(combine) { 
+            const projName = document.getElementById('loadProjectSelect').value; 
+            
+            if (!projName) return; 
+            
+            try { 
+                const res = await fetch(`/api/load/${projName}`); 
+                const config = await res.json(); 
+                
+                if (!combine) { 
+                    document.getElementById('setup-graphics-list').innerHTML = ''; 
+                    document.getElementById('rundown-graphics-list').innerHTML = ''; 
+                    projectGraphics = []; 
+                    
+                    if (config.globals) { 
+                        setTimeout(() => { 
+                            document.getElementById('globalTitleFont').value = config.globals.titleFont || 'Arial'; 
+                            document.getElementById('globalSubFont').value = config.globals.subFont || 'Arial'; 
+                            document.getElementById('globalContentFont').value = config.globals.contentFont || 'Arial'; 
+                        }, 100); 
+                    } 
+                    
+                    if (config.countdown) { 
+                        document.getElementById('cd-min').value = config.countdown.min; 
+                        document.getElementById('cd-sec').value = config.countdown.sec; 
+                        document.getElementById('cd-pos').value = config.countdown.pos; 
+                        document.getElementById('cd-x').value = config.countdown.x || 100; 
+                        document.getElementById('cd-y').value = config.countdown.y || 100; 
+                        document.getElementById('cd-size').value = config.countdown.size; 
+                        document.getElementById('cd-color').value = config.countdown.color; 
+                        document.getElementById('cd-shadow').checked = config.countdown.dropShadow !== false; 
+                        document.getElementById('cd-soon').checked = config.countdown.soon; 
+                        
+                        setTimeout(() => {
+                            document.getElementById('cd-font').value = config.countdown.font || 'Arial';
+                        }, 100); 
+                        
+                        toggleCustomTimerPos(); 
+                    } 
+                } 
+                
+                if (!config.graphics) return; 
+                
+                for (const g of config.graphics) { 
+                    if (projectGraphics.some(existing => existing.folderName === g.folderName)) continue; 
+                    
+                    projectGraphics.push({ 
+                        folderName: g.folderName, 
+                        frameCount: g.frameCount, 
+                        template: g.template, 
+                        assetType: g.assetType, 
+                        filenames: g.filenames, 
+                        hasLoop: g.hasLoop, 
+                        loopFrameCount: g.loopFrameCount, 
+                        loopAssetType: g.loopAssetType, 
+                        loopFilenames: g.loopFilenames 
+                    }); 
+                    
+                    createGraphicPanel(g.folderName, g.frameCount, g.template, g.assetType, g.hasLoop); 
+                    
+                    socket.emit('control-command', { 
+                        action: 'preload', 
+                        folder: g.folderName, 
+                        frameCount: g.frameCount, 
+                        filenames: g.filenames, 
+                        assetType: g.assetType, 
+                        hasLoop: g.hasLoop, 
+                        loopFrameCount: g.loopFrameCount, 
+                        loopAssetType: g.loopAssetType, 
+                        loopFilenames: g.loopFilenames 
+                    }); 
+                    
+                    if (g.template !== 'none' && g.settings) { 
+                        document.getElementById(`size1-${g.folderName}`).value = g.settings.size1; 
+                        document.getElementById(`color1-${g.folderName}`).value = g.settings.color1; 
+                        document.getElementById(`size2-${g.folderName}`).value = g.settings.size2; 
+                        document.getElementById(`color2-${g.folderName}`).value = g.settings.color2; 
+                        document.getElementById(`shadow-${g.folderName}`).checked = g.settings.dropShadow !== false; 
+                        document.getElementById(`animSelect-${g.folderName}`).value = g.settings.animSelect; 
+                        document.getElementById(`pngDelayIn-${g.folderName}`).value = g.settings.pngDelayIn; 
+                        document.getElementById(`textDelayIn-${g.folderName}`).value = g.settings.textDelayIn; 
+                        document.getElementById(`durationIn-${g.folderName}`).value = g.settings.durationIn; 
+                        document.getElementById(`pngDelayOut-${g.folderName}`).value = g.settings.pngDelayOut; 
+                        document.getElementById(`textDelayOut-${g.folderName}`).value = g.settings.textDelayOut; 
+                        document.getElementById(`durationOut-${g.folderName}`).value = g.settings.durationOut; 
+                    } 
+                } 
+                
+                document.getElementById('projectStatus').innerText = combine ? `➕ Merged!` : `📂 Loaded!`; 
+                
+                setTimeout(() => {
+                    document.getElementById('projectStatus').innerText = '';
+                }, 3000); 
+                
+            } catch(e) {
+                console.error("Failed to load project.", e);
+            } 
+        }
+
+        // --- ASSET MANAGEMENT ---
+        function removeGraphic(folderName) { 
+            if(!confirm(`Remove "${folderName}"?`)) return; 
+            
+            socket.emit('control-command', { 
+                action: 'panic', 
+                folder: folderName 
+            }); 
+            
+            projectGraphics = projectGraphics.filter(g => g.folderName !== folderName); 
+            
+            const sItem = document.getElementById(`setup-item-${folderName}`); 
+            if (sItem) sItem.remove(); 
+            
+            const rItem = document.getElementById(`rundown-item-${folderName}`); 
+            if (rItem) rItem.remove(); 
+        }
+        
+        function toggleInputType(target) { 
+            if (target === 'in') { 
+                const type = document.getElementById('assetTypeSelect').value; 
+                document.getElementById('folderInput').style.display = type === 'png' ? 'inline-block' : 'none'; 
+                document.getElementById('fileInput').style.display = type === 'webm' ? 'inline-block' : 'none'; 
+            } else { 
+                const type = document.getElementById('loopAssetTypeSelect').value; 
+                document.getElementById('loopFolderInput').style.display = type === 'png' ? 'inline-block' : 'none'; 
+                document.getElementById('loopFileInput').style.display = type === 'webm' ? 'inline-block' : 'none'; 
+            } 
+        }
+        
+        async function uploadSequence() { 
+            const type = document.getElementById('assetTypeSelect').value; 
+            const inputToUse = type === 'png' ? document.getElementById('folderInput') : document.getElementById('fileInput'); 
+            
+            const loopType = document.getElementById('loopAssetTypeSelect').value; 
+            const loopInputToUse = loopType === 'png' ? document.getElementById('loopFolderInput') : document.getElementById('loopFileInput'); 
+            
+            const graphicName = document.getElementById('newGraphicName').value; 
+            const templateType = document.getElementById('templateType').value; 
+            
+            if (inputToUse.files.length === 0 || !graphicName) { 
+                return alert("Provide a name and IN file/folder."); 
+            }
+            
+            if (projectGraphics.some(g => g.folderName === graphicName)) { 
+                return alert("Name already exists."); 
+            }
+            
+            document.getElementById('uploadStatus').innerText = " Uploading..."; 
+            
+            const formData = new FormData(); 
+            formData.append('graphicName', graphicName); 
+            
+            for (let i = 0; i < inputToUse.files.length; i++) { 
+                formData.append('graphicFiles', inputToUse.files[i]); 
+            } 
+            
+            if (loopInputToUse && loopInputToUse.files.length > 0) { 
+                for (let i = 0; i < loopInputToUse.files.length; i++) { 
+                    formData.append('loopFiles', loopInputToUse.files[i]); 
+                } 
+            } 
+            
+            try { 
+                const response = await fetch('/upload', { method: 'POST', body: formData }); 
+                const result = await response.json(); 
+                
+                if (result.success) { 
+                    document.getElementById('uploadStatus').innerText = " Complete!"; 
+                    
+                    projectGraphics.push({ 
+                        folderName: result.folderName, 
+                        frameCount: result.frameCount, 
+                        template: templateType, 
+                        assetType: result.assetType, 
+                        filenames: result.filenames, 
+                        hasLoop: result.hasLoop, 
+                        loopFrameCount: result.loopFrameCount, 
+                        loopAssetType: result.loopAssetType, 
+                        loopFilenames: result.loopFilenames 
+                    }); 
+                    
+                    socket.emit('control-command', { 
+                        action: 'preload', 
+                        folder: result.folderName, 
+                        frameCount: result.frameCount, 
+                        filenames: result.filenames, 
+                        assetType: result.assetType, 
+                        hasLoop: result.hasLoop, 
+                        loopFrameCount: result.loopFrameCount, 
+                        loopAssetType: result.loopAssetType, 
+                        loopFilenames: result.loopFilenames 
+                    }); 
+                    
+                    createGraphicPanel(result.folderName, result.frameCount, templateType, result.assetType, result.hasLoop); 
+                    
+                    document.getElementById('newGraphicName').value = ''; 
+                    inputToUse.value = ''; 
+                    
+                    if (loopInputToUse) {
+                        loopInputToUse.value = ''; 
+                    }
+                    
+                    setTimeout(() => {
+                        document.getElementById('uploadStatus').innerText = "";
+                    }, 3000); 
+                } 
+            } catch (error) {
+                console.error("Upload failed.", error);
+            } 
+        }
+        
+        function createGraphicPanel(folderName, frameCount, template, assetType, hasLoop) {
+            const loopBadge = hasLoop 
+                ? `<span style="background:#e83e8c; color:white; padding:2px 6px; border-radius:4px; font-size:10px; margin-left:5px;">LOOPING</span>` 
+                : '';
+                
+            const setupHtml = `
+                <div class="panel setup-list-panel" id="setup-item-${folderName}">
+                    <span style="font-size: 18px;">
+                        <b>${folderName}</b> 
+                        <span style="font-size:12px; color:#aaa;">(${assetType.toUpperCase()} - ${template})</span> 
+                        ${loopBadge}
+                    </span>
+                    <button class="remove-btn" onclick="removeGraphic('${folderName}')">❌ Remove</button>
+                </div>
+            `;
+            
+            document.getElementById('setup-graphics-list').innerHTML += setupHtml;
+            
+            let textInputsHtml = ''; 
+            let stylingHtml = '';
+            
+            if (template === 'l3_basic') { 
+                textInputsHtml = `
+                    <label>Main Title:</label>
+                    <input type="text" id="title-${folderName}"><br>
+                    <label>Subtitle:</label>
+                    <input type="text" id="sub-${folderName}"><br><br>
+                `; 
+            } else if (template === 'l3_caster') { 
+                textInputsHtml = `
+                    <label>Caster 1:</label>
+                    <input type="text" id="caster1-${folderName}"><br>
+                    <label>Caster 2:</label>
+                    <input type="text" id="caster2-${folderName}"><br><br>
+                `; 
+            }
+            
+            if (template !== 'none') { 
+                stylingHtml = `
+                    <div style="background: #333; padding: 10px; border-radius: 5px; margin-bottom: 10px;">
+                        <label>Main/Caster 1 Size: </label>
+                        <input type="number" id="size1-${folderName}" value="${template === 'l3_basic' ? 55 : 45}" style="width:60px;">
+                        <label>Color: </label>
+                        <input type="color" id="color1-${folderName}" value="#ffffff"><br>
+                        
+                        <label>Sub/Caster 2 Size: </label>
+                        <input type="number" id="size2-${folderName}" value="${template === 'l3_basic' ? 35 : 45}" style="width:60px;">
+                        <label>Color: </label>
+                        <input type="color" id="color2-${folderName}" value="${template === 'l3_basic' ? '#00ffcc' : '#ffffff'}"><br><br>
+                        
+                        <label style="cursor:pointer; font-weight:bold; margin-right:15px; color:#00ffcc;">
+                            <input type="checkbox" id="shadow-${folderName}" checked style="transform: scale(1.5); margin-right:10px;"> Drop Shadow
+                        </label><br><br>
+                        
+                        <label>Text Anim Style:</label>
+                        <select id="animSelect-${folderName}">
+                            <option value="anim-fade">Fade In</option>
+                            <option value="anim-lr">Left-to-Right Wipe</option>
+                            <option value="anim-rl">Right-to-Left Wipe</option>
+                            <option value="anim-mo">Middle-Out Wipe</option>
+                        </select><br><br>
+                        
+                        <div style="display: flex; gap: 20px;">
+                            <div>
+                                <strong>--- IN Timing ---</strong><br>
+                                <label>Asset Delay:</label>
+                                <input type="number" id="pngDelayIn-${folderName}" value="0" style="width:60px;"> ms<br>
+                                <label>Text Delay:</label>
+                                <input type="number" id="textDelayIn-${folderName}" value="500" style="width:60px;"> ms<br>
+                                <label>Text Dur:</label>
+                                <input type="number" id="durationIn-${folderName}" value="800" style="width:60px;"> ms
+                            </div>
+                            <div>
+                                <strong>--- OUT Timing ---</strong><br>
+                                <label>Asset Delay:</label>
+                                <input type="number" id="pngDelayOut-${folderName}" value="500" style="width:60px;"> ms<br>
+                                <label>Text Delay:</label>
+                                <input type="number" id="textDelayOut-${folderName}" value="0" style="width:60px;"> ms<br>
+                                <label>Text Dur:</label>
+                                <input type="number" id="durationOut-${folderName}" value="500" style="width:60px;"> ms
+                            </div>
+                        </div>
+                    </div>
+                `; 
+            }
+            
+            const rundownHtml = `
+                <div class="panel" id="rundown-item-${folderName}">
+                    <div class="panel-header" onclick="togglePanel('${folderName}')">
+                        <span class="chevron" id="chevron-${folderName}">▶</span>
+                        <h3 style="margin:0;">
+                            ${folderName} 
+                            <span style="font-size:12px; color:#aaa;">(${assetType.toUpperCase()} - ${template})</span> 
+                            ${loopBadge}
+                        </h3>
+                    </div>
+                    
+                    <div class="panel-body" id="body-${folderName}" style="display:none;">
+                        ${textInputsHtml} 
+                        ${stylingHtml}
+                    </div>
+                    
+                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #555; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <label>Output Channel:</label>
+                            <select id="channelSelect-${folderName}">
+                                <option value="1">Output 1</option>
+                                <option value="2">Output 2</option>
+                                <option value="3">Output 3</option>
+                                <option value="4">Output 4</option>
+                            </select>
+                        </div>
+                        <div>
+                            <button class="play" onclick="triggerGraphic('${folderName}', 'play', ${frameCount}, '${template}', '${assetType}')">PLAY</button>
+                            <button class="out" onclick="triggerGraphic('${folderName}', 'out', ${frameCount}, '${template}', '${assetType}')">OUT</button>
+                            <button class="panic" onclick="triggerGraphic('${folderName}', 'panic', null, '${template}', '${assetType}')">PANIC KILL</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('rundown-graphics-list').innerHTML += rundownHtml;
+        }
+        
+        function triggerGraphic(folderName, actionType, frameCount, template, assetType) {
+            const channel = parseInt(document.getElementById(`channelSelect-${folderName}`).value); 
+            
+            let textData = {}; 
+            let styleData = {}; 
+            let animationStyle = '';
+            
+            if (template !== 'none') { 
+                animationStyle = document.getElementById(`animSelect-${folderName}`).value; 
+                styleData.durationOut = document.getElementById(`durationOut-${folderName}`).value + 'ms'; 
+                styleData.pngDelayOut = document.getElementById(`pngDelayOut-${folderName}`).value + 'ms'; 
+                styleData.textDelayOut = document.getElementById(`textDelayOut-${folderName}`).value + 'ms'; 
+            }
+            
+            if (actionType === 'play' && template !== 'none') { 
+                styleData.size1 = document.getElementById(`size1-${folderName}`).value + 'px'; 
+                styleData.color1 = document.getElementById(`color1-${folderName}`).value; 
+                styleData.size2 = document.getElementById(`size2-${folderName}`).value + 'px'; 
+                styleData.color2 = document.getElementById(`color2-${folderName}`).value; 
+                styleData.dropShadow = document.getElementById(`shadow-${folderName}`).checked; 
+                
+                styleData.pngDelayIn = document.getElementById(`pngDelayIn-${folderName}`).value + 'ms'; 
+                styleData.textDelayIn = document.getElementById(`textDelayIn-${folderName}`).value + 'ms'; 
+                styleData.durationIn = document.getElementById(`durationIn-${folderName}`).value + 'ms'; 
+                
+                styleData.globalTitleFont = document.getElementById('globalTitleFont').value; 
+                styleData.globalSubFont = document.getElementById('globalSubFont').value; 
+                styleData.globalContentFont = document.getElementById('globalContentFont').value; 
+                
+                if (template === 'l3_basic') { 
+                    textData.title = document.getElementById(`title-${folderName}`).value; 
+                    textData.subtitle = document.getElementById(`sub-${folderName}`).value; 
+                } else if (template === 'l3_caster') { 
+                    textData.caster1 = document.getElementById(`caster1-${folderName}`).value; 
+                    textData.caster2 = document.getElementById(`caster2-${folderName}`).value; 
+                } 
+            }
+            
+            socket.emit('control-command', { 
+                channel, 
+                action: actionType, 
+                folder: folderName, 
+                frameCount, 
+                template, 
+                textData, 
+                styleData, 
+                animationStyle, 
+                assetType 
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "name": "sparkbroadcastcg",
+  "version": "1.0.0",
+  "author": "",
+  "license": "ISC",
+  "description": "Broadcast character generator: control page + CG render page."
+}

@@ -1,0 +1,16 @@
+/* Browser-source page: transparent, no scrollbars, no cursor interaction. */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+body {
+  font-family: system-ui, sans-serif;
+  color: #fff;
+  user-select: none;
+  cursor: none;
+}
