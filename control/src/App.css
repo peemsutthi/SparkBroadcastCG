@@ -62,11 +62,11 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--ok);
+  background: var(--program-live);
 }
 
 .relay.down .lamp {
-  background: var(--armed);
+  background: var(--warning);
   animation: blink 1.4s steps(1, end) infinite;
 }
 
@@ -96,8 +96,8 @@
 
 /* ── Panel ─────────────────────────────────────────────────────────────
    A module in the rack. The rail on its left edge is the tally light:
-   dark while the panel holds nothing, burning red the moment one of its
-   graphics is on air. */
+   dark while the panel holds nothing, burning program-live green the
+   moment one of its graphics is on air. */
 .panel {
   display: flex;
   background: var(--panel);
@@ -115,7 +115,7 @@
 }
 
 .panel.live .rail {
-  background: linear-gradient(90deg, #b31111, var(--tally));
+  background: linear-gradient(90deg, #0f7233, var(--program-live));
 }
 
 .panel-body {
@@ -191,7 +191,21 @@
 }
 
 .field-score {
-  flex: 0 0 5rem;
+  flex: 0 0 8rem;
+}
+
+.field-logo {
+  flex: 0 0 11rem;
+}
+
+.score-input {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.score-input input {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* Pressed, so raised — the same rule the number keys follow. */
@@ -208,8 +222,9 @@
 }
 
 /* ── Teams ─────────────────────────────────────────────────────────────
-   Side colour rides the top edge of the head. It is identity, not state,
-   so it stays clear of the tally rail: red on that edge means on air. */
+   Side colour rides the top edge of the head. It is identity (team-a/
+   team-b), not state, so it stays clear of the tally rail: the rail is
+   program-live green, and no team colour reuses it. */
 .teams {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -217,11 +232,11 @@
 }
 
 .panel.blue .panel-head {
-  box-shadow: inset 0 2px 0 var(--blue);
+  box-shadow: inset 0 2px 0 var(--team-a);
 }
 
 .panel.red .panel-head {
-  box-shadow: inset 0 2px 0 var(--red);
+  box-shadow: inset 0 2px 0 var(--team-b);
 }
 
 /* One group per block of controls, each taking a full row of the panel. */
@@ -304,6 +319,49 @@
   text-decoration: underline;
 }
 
+/* ── Colour ────────────────────────────────────────────────────────────
+   The swatch is pressed to open the picker, so it is raised like every other
+   key. The hex beside it is what the swatch produced, so it reads as a value:
+   mono, and the one place on the page a colour is not from the palette — it
+   is the show's colour, not this UI's. */
+.field-color {
+  flex: 0 0 11rem;
+}
+
+.color-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.color-input input[type='color'] {
+  flex: 0 0 44px;
+  height: 34px;
+  padding: 3px;
+  border: 1px solid #000;
+  border-radius: 2px;
+  background: var(--key);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 6%);
+  cursor: pointer;
+}
+
+.color-input input[type='color']::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.color-input input[type='color']::-webkit-color-swatch {
+  border: 1px solid #000;
+  border-radius: 1px;
+}
+
+/* Typed into, so it takes the recessed input styling from .panel-content and
+   only needs to be told how wide and that hex reads in caps. */
+.swatch-hex {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-transform: uppercase;
+}
+
 .btn {
   height: 34px;
   padding: 0 1rem;
@@ -321,6 +379,11 @@
 
 .btn:hover {
   background: var(--key-lit);
+}
+
+.btn-mini {
+  flex: 0 0 34px;
+  padding: 0;
 }
 
 .note {
@@ -412,8 +475,8 @@
 /* ── Transport ─────────────────────────────────────────────────────────
    The step machine, beside the board rather than under it. Sticky, because
    the team panels are taller than the window and NEXT PHASE is pressed once
-   per phase under time pressure. Its tally rail is the real one: red means
-   the draft is on air. */
+   per phase under time pressure. Its tally rail is the real one:
+   program-live green means the draft is on air. */
 .transport-col {
   position: sticky;
   top: 1.5rem;
@@ -445,7 +508,35 @@
 .transport-keys .btn {
   height: 52px;
   padding: 0;
-  font-size: 11px;
+  font-size: 14px;
+}
+
+.btn-sync {
+  background: var(--program-live);
+}
+
+.btn-sync:hover {
+  background: var(--program-live);
+}
+
+.btn-hide {
+  background: var(--warning);
+  border-color: var(--warning);
+  color: var(--void);
+}
+
+.btn-hide:hover {
+  background: var(--warning);
+}
+
+.transport-swap {
+  margin-top: 0.4rem;
+}
+
+.btn-swap {
+  width: 100%;
+  height: 52px;
+  font-size: 14px;
 }
 
 /* Destructive, so it sits apart from the routine keys rather than in the row
@@ -459,23 +550,26 @@
 
 .btn-clear {
   width: 100%;
-  height: 40px;
-  background: none;
-  box-shadow: none;
-  color: var(--dim);
-  font-size: 10px;
+  height: 60px;
+  background: var(--key);
+  border-color: var(--warning);
+  color: var(--warning);
+  font-size: 16px;
 }
 
 .btn-clear:hover {
+  background: var(--key-lit);
   color: var(--readout);
 }
 
 .btn-clear.armed {
-  color: var(--armed);
+  background: var(--warning);
+  border-color: var(--warning);
+  color: var(--void);
 }
 
 .btn:disabled {
-  color: var(--dim);
+  color: var(--disabled);
   cursor: not-allowed;
   opacity: 0.45;
 }

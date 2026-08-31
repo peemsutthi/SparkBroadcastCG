@@ -1,6 +1,8 @@
-/* Ported from the prototype's output.html. The pixel coordinates are tuned to
-   overlayhud/hud.png — moving them moves the overlay off its artwork. The
-   browser source must be 1920x1080, as the README says. */
+/* Ported from the prototype's output.html, then squared up against
+   assets/samplehud/samplehud.psd — every pixel coordinate below is a layer
+   bbox out of that file, which is also what overlayhud/hud.png was cut from.
+   Moving them moves the overlay off its artwork. The browser source must be
+   1920x1080, as the README says. */
 .draft-overlay {
   position: absolute;
   top: 0;
@@ -32,37 +34,80 @@
   object-position: center bottom;
 }
 
+/* Under the centre badge, on the psd's two Cinzel lines (caps at y1021 and
+   y1046), both centred on 960.
+   No `color` here or on .draft-score / .draft-team-name: the operator sets
+   those in control's Setup tab and they arrive on the take. DEFAULT_COLORS in
+   shared/draft.ts holds the psd fills — change them there, not here. */
 .draft-match-info {
   position: absolute;
-  top: 750px;
+  top: 1016px;
   left: 50%;
   transform: translateX(-50%);
-  font-size: 22px;
+  font-size: 21px;
   font-weight: bold;
-  color: #ffcc00;
+  line-height: 26px;
   text-align: center;
-  text-shadow: 2px 2px 4px #000;
+  white-space: nowrap;
 }
 
-.draft-game-num {
-  font-size: 18px;
-  color: #fff;
-}
-
-.draft-team-name {
+/* The score and the two team logos are one row of the psd's centre badge:
+   logo 740, digit 897, digit 1025, logo 1076 — digits centred on y907. The
+   100px squares the hud art leaves blank at 740 and 1076 are the logo wells,
+   not the score. */
+.draft-score {
   position: absolute;
-  top: 739px;
+  top: 864px;
+  width: 60px;
+  height: 76px;
   display: flex;
   align-items: center;
-  width: 200px;
-  height: 86px;
+  justify-content: center;
+  font-size: 72px;
+  font-weight: bold;
+}
+
+.draft-score.blue {
+  left: 867px;
+}
+
+.draft-score.red {
+  left: 995px;
+}
+
+.draft-team-logo {
+  position: absolute;
+  top: 848px;
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+}
+
+.draft-team-logo.blue {
+  left: 740px;
+}
+
+.draft-team-logo.red {
+  left: 1076px;
+}
+
+/* Centred on the psd's TMA/TMB anchors (x687 and x1233). The plate is as wide
+   as it can be without crossing the screen centre or the BAN label, so a long
+   name grows outward from the same point the short one sits on. */
+.draft-team-name {
+  position: absolute;
+  top: 745px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 534px;
+  height: 70px;
   overflow: hidden;
   font-size: 65px;
   font-weight: bold;
   letter-spacing: 1px;
-  color: #ffb700;
+  text-align: center;
   text-transform: uppercase;
-  text-shadow: 2px 2px 4px #000;
   white-space: nowrap;
 }
 
@@ -73,14 +118,11 @@
 }
 
 .draft-team-name.blue {
-  left: 100px;
-  justify-content: flex-start;
+  left: 420px;
 }
 
 .draft-team-name.red {
-  right: 100px;
-  justify-content: flex-end;
-  text-align: right;
+  left: 966px;
 }
 
 /* ── Picks ──────────────────────────────────────────────────────────── */
@@ -117,19 +159,24 @@
   position: absolute;
   bottom: 10px;
   z-index: 2;
+  box-sizing: border-box;
   width: 100%;
   font-size: 20px;
   font-weight: bold;
   color: #fff;
-  text-align: center;
   text-transform: uppercase;
-  text-shadow:
-    2px 2px 4px #000,
-    -2px -2px 4px #000,
-    2px -2px 4px #000,
-    -2px 2px 4px #000,
-    0 4px 10px #000;
+  text-shadow: 0 1px 5px rgb(0 0 0 / 100%);
   white-space: nowrap;
+}
+
+.player-name.blue {
+  padding-left: 20px;
+  text-align: left;
+}
+
+.player-name.red {
+  padding-right: 20px;
+  text-align: right;
 }
 
 #bp-1 { left: 0; }
@@ -146,7 +193,8 @@
 /* ── Bans ───────────────────────────────────────────────────────────── */
 .ban-slot {
   position: absolute;
-  top: 745px;
+  top: 748px;
+  box-sizing: border-box; /* the psd frame is 70px including the border */
   width: 70px;
   height: 70px;
   overflow: hidden;
@@ -163,32 +211,33 @@
   opacity: 0.6;
 }
 
-#bb-1 { left: 312px; }
-#bb-2 { left: 392px; }
-#bb-3 { left: 472px; }
-#bb-4 { left: 552px; }
-#rb-1 { right: 312px; }
-#rb-2 { right: 392px; }
-#rb-3 { right: 472px; }
-#rb-4 { right: 552px; }
+#bb-1 { left: 10px; }
+#bb-2 { left: 83px; }
+#bb-3 { left: 156px; }
+#bb-4 { left: 229px; }
+#rb-1 { right: 10px; }
+#rb-2 { right: 83px; }
+#rb-3 { right: 156px; }
+#rb-4 { right: 229px; }
 
 /* ── Global bans ────────────────────────────────────────────────────── */
+/* Rows of five 60px cells from y57, inset 115px from either edge, per the psd.
+   Its own row spacing is 39px; `gap` below is the knob. */
 .global-bp-container {
   position: absolute;
-  top: 60px;
+  top: 57px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  animation: gbp-in 0.6s ease-out both;
+  gap: 20px;
 }
 
 .global-bp-container.blue {
-  left: 40px;
+  left: 115px;
   align-items: flex-start;
 }
 
 .global-bp-container.red {
-  right: 40px;
+  right: 115px;
   align-items: flex-end;
 }
 
@@ -197,18 +246,51 @@
   to { opacity: 1; transform: none; }
 }
 
+/* Per row, not on the container: a game filled later mounts its own row, and
+   that row has to pop on its own rather than sit there because the container
+   already played its entrance. */
 .global-bp-heroes {
+  position: relative;
   display: flex;
-  justify-content: center;
-  gap: 8px;
+  animation: gbp-in 0.6s ease-out both;
+}
+
+/* Ban 1 is the outer end on both sides, like the picks and bans below. */
+.global-bp-container.red .global-bp-heroes {
+  flex-direction: row-reverse;
+}
+
+/* The psd's G1/G2 caps, centred on x59 and x1860 — outside the cells, so the
+   label reads away from the board on each side. Out of flow, so the cells keep
+   the 115px inset. */
+.global-bp-label {
+  position: absolute;
+  top: 50%;
+  width: 60px;
+  font-size: 46px;
+  font-weight: bold;
+  line-height: 1;
+  color: #5973b3;
+  text-align: center;
+  transform: translateY(-50%);
+}
+
+.global-bp-container.blue .global-bp-label {
+  right: 100%;
+  margin-right: 26px;
+}
+
+.global-bp-container.red .global-bp-label {
+  left: 100%;
+  margin-left: 26px;
 }
 
 .global-bp-slot {
-  width: 50px;
-  height: 50px;
+  box-sizing: border-box;
+  width: 60px;
+  height: 60px;
   overflow: hidden;
   border: 2px solid #555;
-  border-radius: 4px;
   background: rgb(0 0 0 / 80%);
 }
 
@@ -288,7 +370,6 @@
   width: 100%;
   font-weight: bold;
   text-align: center;
-  text-shadow: 2px 2px 4px #000;
   opacity: 0;
 }
 

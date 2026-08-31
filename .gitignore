@@ -12,6 +12,8 @@ dist
 dist-ssr
 *.local
 
+assets/samplehud/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

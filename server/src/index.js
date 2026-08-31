@@ -35,6 +35,18 @@ const heroes = async () => {
   }
 }
 
+// Team logos are a free-form drop too, but unlike hero art there's no shared
+// basename across folders to imply an extension — so the filename returned
+// (and sent back by control) keeps it.
+const teamLogos = async () => {
+  try {
+    const files = await readdir(`${ASSETS}/teamlogo`)
+    return files.filter((f) => /\.(png|jpe?g|svg|webp)$/i.test(f)).sort()
+  } catch {
+    return []
+  }
+}
+
 // A browser cannot discover the address of the machine it runs on, so control
 // asks the relay. Without this the copyable browser-source URL says localhost,
 // which is a dead source the moment OBS is on the streaming PC instead.
@@ -56,6 +68,7 @@ const notFound = (res) => {
 
 const server = createServer(async (req, res) => {
   if (req.url === '/api/heroes') return json(res, await heroes())
+  if (req.url === '/api/teamlogos') return json(res, await teamLogos())
   if (req.url === '/api/host') return json(res, { host: lanAddress() })
 
   if (req.url.startsWith('/assets/')) {

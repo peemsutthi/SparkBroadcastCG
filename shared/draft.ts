@@ -39,10 +39,27 @@ export function phaseLabel(step: number): string {
 export type Team = {
   name: string
   score: string
+  logo: string // filename in assets/teamlogo, '' for none
   players: string[] // 5
   picks: string[] // 5
   bans: string[] // 4
   used: string[][] // 4 games x 5 heroes
+}
+
+/** The on-air text colours the operator can set. These live here rather than
+ *  as `color` rules in cg's stylesheet so there is one source: control seeds
+ *  its pickers from them and cg falls back to them, which a duplicated hex in
+ *  two apps could not promise. The values are the samplehud.psd text fills. */
+export type DraftColors = {
+  teamName: string
+  score: string
+  matchInfo: string
+}
+
+export const DEFAULT_COLORS: DraftColors = {
+  teamName: '#456ac6',
+  score: '#456ac6',
+  matchInfo: '#5973b3',
 }
 
 export type DraftState = {
@@ -50,6 +67,9 @@ export type DraftState = {
   hiding?: boolean
   matchName: string
   gameNum: string
+  // Optional: a take sent before this field existed still has to render, and
+  // cg fills the gap from DEFAULT_COLORS.
+  colors?: DraftColors
   blue: Team
   red: Team
 }
@@ -57,6 +77,7 @@ export type DraftState = {
 export const emptyTeam = (): Team => ({
   name: '',
   score: '0',
+  logo: '',
   players: ['', '', '', '', ''],
   picks: ['', '', '', '', ''],
   bans: ['', '', '', ''],

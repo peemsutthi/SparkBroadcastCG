@@ -1,27 +1,28 @@
-/* Design language: a switcher panel, not a dashboard.
-   Colour is rationed because on real gear a lit lamp means something:
-   red is ON AIR and is used nowhere else, amber is attention, green is
-   healthy. Everything the operator merely reads or presses stays grey. */
 :root {
   --void: #0c0e11; /* rack void, page ground */
   --panel: #14171b; /* milled panel face */
   --key: #1c2026; /* raised key */
-  --key-lit: #262c34;
   --seam: #262b32; /* engraved hairline */
   --recess: #080a0c; /* inside of a recessed field */
   --legend: #fff; /* label */
   --readout: #fff; /* a value you actually read */
-  --accent: #2f6bd8; /* lit edge of a selected key */
-
-  --tally: #ff2e2e; /* ON AIR. Nothing else. */
-  --armed: #ffb020; /* wants attention */
-  --ok: #3fcf6e; /* healthy */
   --dim: #8b929c; /* unselected key */
 
-  /* Team identity, not signal. Kept clear of --tally so a red edge never
-     reads as on air. */
-  --blue: #2f8fd8;
-  --red: #e0355f;
+  --normal-camera: #1e3a5f;
+  --team-a: #2563eb;
+  --team-b: #dc2626;
+  --replay-a: #7c3aed;
+  --replay-b: #c026d3;
+  --program-live: #16a34a;
+  --preview: #ea580c;
+  --graphics-cg: #0891b2;
+  --audio: #0d9488;
+  --utility: #475569;
+  --warning: #ca8a04;
+  --disabled: #374151;
+
+  --key-lit: var(--normal-camera); /* lit edge of a selected key */
+  --accent: var(--team-a); /* trim on a selected key */
 
   --sans: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
   --mono: 'Azeret Mono', ui-monospace, 'SF Mono', Menlo, monospace;

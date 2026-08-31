@@ -2,19 +2,34 @@ import { Fragment, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { API, useRelay } from './relay'
 import {
+  DEFAULT_COLORS,
   DONE_STEP,
   LAST_PHASE,
   SWAP_STEP,
   emptyTeam,
   phaseLabel,
 } from '../../shared/draft'
-import type { DraftState, Team } from '../../shared/draft'
+import type { DraftColors, DraftState, Team } from '../../shared/draft'
 import './App.css'
 
 const TABS = ['Draft / Ban', 'Setup'] as const
 type Tab = (typeof TABS)[number]
 
 const GAMES = [1, 2, 3, 4, 5, 6, 7]
+
+const COLORS_KEY = 'sparkcg.colors'
+
+/** Colours are a show setting, not part of a draft — they are set once and
+ *  should outlive the reload that puts the board back to step 0. Spread over
+ *  the defaults so a key added later fills itself in. */
+const loadColors = (): DraftColors => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(COLORS_KEY) ?? '{}')
+    return { ...DEFAULT_COLORS, ...saved }
+  } catch {
+    return DEFAULT_COLORS // no storage, or someone hand-edited the value
+  }
+}
 
 /** A module in the rack. `live` burns the tally rail: the panel has a
  *  graphic on air. */
@@ -58,6 +73,21 @@ function useHeroes() {
   return heroes
 }
 
+/** The team logo roster, read off the relay the same way heroes are — a file
+ *  drop in assets/teamlogo, no code change. Unlike heroes it's a closed set
+ *  the operator picks from, so control renders it as a dropdown, not a
+ *  free-typed field. */
+function useTeamLogos() {
+  const [logos, setLogos] = useState<string[]>([])
+  useEffect(() => {
+    fetch(`${API}/api/teamlogos`)
+      .then((r) => r.json())
+      .then(setLogos)
+      .catch(() => {}) // relay down: dropdown just stays empty
+  }, [])
+  return logos
+}
+
 const at = (xs: string[], i: number, v: string) =>
   xs.map((x, j) => (j === i ? v : x))
 
@@ -76,21 +106,24 @@ const BANS = [0, 1, 2, 3]
 function TeamPanel({
   side,
   team,
+  logos,
   onChange,
   onSwap,
 }: {
   side: 'blue' | 'red'
   team: Team
+  logos: string[]
   onChange: (patch: Partial<Team>) => void
   onSwap: () => void
 }) {
   const { legend, eg } = SIDES[side]
-  const { name, score, players, picks, bans, used: pool } = team
+  const { name, score, logo, players, picks, bans, used: pool } = team
   const [from, setFrom] = useState(0)
   const [to, setTo] = useState(4)
 
   const setName = (v: string) => onChange({ name: v })
   const setScore = (v: string) => onChange({ score: v })
+  const setLogo = (v: string) => onChange({ logo: v })
   const setPlayers = (v: string[]) => onChange({ players: v })
   const setPicks = (v: string[]) => onChange({ picks: v })
   const setBans = (v: string[]) => onChange({ bans: v })
@@ -108,13 +141,33 @@ function TeamPanel({
             <span className="legend">Team</span>
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder={eg} />
           </label>
+          <label className="field field-logo">
+            <span className="legend">Logo</span>
+            <select value={logo} onChange={(e) => setLogo(e.target.value)}>
+              <option value="">None</option>
+              {logos.map((f) => (
+                <option key={f} value={f}>
+                  {f}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="field field-score">
             <span className="legend">Score</span>
-            <input
-              inputMode="numeric"
-              value={score}
-              onChange={(e) => setScore(e.target.value)}
-            />
+            <div className="score-input">
+              <input
+                inputMode="numeric"
+                value={score}
+                onChange={(e) => setScore(e.target.value)}
+              />
+              <button
+                type="button"
+                className="btn btn-mini"
+                onClick={() => setScore(String(Number(score || 0) + 1))}
+              >
+                +1
+              </button>
+            </div>
           </label>
         </div>
       </div>
@@ -224,7 +277,7 @@ function MatchPanel({
   return (
     <Panel
       legend="Match"
-      readout={`${name.trim() || '—'} · GAME ${game}`.toUpperCase()}
+      readout={`${name.trim() || '—'} · GAME ${gameNum || '—'}`.toUpperCase()}
     >
       <label className="field field-wide">
         <span className="legend">Match name</span>
@@ -250,7 +303,99 @@ function MatchPanel({
               {n}
             </button>
           ))}
+          <button
+            type="button"
+            className="num-key"
+            onClick={() => setGame(Math.min(GAMES[GAMES.length - 1], game + 1))}
+          >
+            +1
+          </button>
         </div>
+      </div>
+    </Panel>
+  )
+}
+
+const SWATCHES: { key: keyof DraftColors; label: string }[] = [
+  { key: 'teamName', label: 'Team name' },
+  { key: 'score', label: 'Score' },
+  { key: 'matchInfo', label: 'Match line' },
+]
+
+const HEX = /^#[0-9a-f]{6}$/i
+
+/** A colour arrives as a hex far more often than as a point in a gradient —
+ *  it comes off a brand sheet or out of the psd — so the hex is typed in
+ *  here, not just read back off the swatch.
+ *
+ *  `typing` holds the half-written value and nothing else: `#45` is not a
+ *  colour and must not reach air. It clears the moment the text parses, so
+ *  the field falls back to the live value and the swatch, Defaults and a
+ *  committed edit all show through with no syncing to keep them in step. */
+function Swatch({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  const [typing, setTyping] = useState<string | null>(null)
+
+  const type = (v: string) => {
+    if (!HEX.test(v)) return setTyping(v)
+    onChange(v.toLowerCase())
+    setTyping(null)
+  }
+
+  return (
+    <label className="field field-color">
+      <span className="legend">{label}</span>
+      <div className="color-input">
+        <input
+          type="color"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        <input
+          className="swatch-hex"
+          value={typing ?? value}
+          spellCheck={false}
+          onChange={(e) => type(e.target.value)}
+          onBlur={() => setTyping(null)} // an entry that never parsed reverts
+        />
+      </div>
+    </label>
+  )
+}
+
+/** Set once per show, so it sits in Setup rather than beside the fields the
+ *  operator drives the draft from. One colour per element, not per side: the
+ *  hud art carries team identity, the text does not. */
+function ColorPanel({
+  colors,
+  onChange,
+}: {
+  colors: DraftColors
+  onChange: (c: DraftColors) => void
+}) {
+  return (
+    <Panel legend="Colours">
+      {SWATCHES.map(({ key, label }) => (
+        <Swatch
+          key={key}
+          label={label}
+          value={colors[key]}
+          onChange={(v) => onChange({ ...colors, [key]: v })}
+        />
+      ))}
+
+      <div className="field">
+        <span className="legend">Reset</span>
+        <button className="btn" onClick={() => onChange(DEFAULT_COLORS)}>
+          Defaults
+        </button>
       </div>
     </Panel>
   )
@@ -312,6 +457,7 @@ function Transport({
   onSync,
   onHide,
   onClear,
+  onSwapSides,
 }: {
   step: number
   onAir: boolean
@@ -319,6 +465,7 @@ function Transport({
   onSync: () => void
   onHide: () => void
   onClear: () => void
+  onSwapSides: () => void
 }) {
   // Wiping the board mid-draft is not undoable, so it takes two presses. A
   // confirm() dialog would block the page, which is the last thing wanted
@@ -357,11 +504,17 @@ function Transport({
             <button className="btn" disabled={step === 0} onClick={() => onStep(step - 1)}>
               Back
             </button>
-            <button className="btn" disabled={!onAir} onClick={onSync}>
+            <button className="btn btn-sync" disabled={!onAir} onClick={onSync}>
               Sync
             </button>
-            <button className="btn" disabled={!onAir} onClick={onHide}>
+            <button className="btn btn-hide" disabled={!onAir} onClick={onHide}>
               Hide
+            </button>
+          </div>
+
+          <div className="transport-swap">
+            <button className="btn btn-swap" onClick={onSwapSides}>
+              Swap sides
             </button>
           </div>
 
@@ -391,11 +544,13 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('Draft / Ban')
   const { live, onAir, send } = useRelay()
   const heroes = useHeroes()
+  const logos = useTeamLogos()
 
   const [draft, setDraft] = useState<DraftState>(() => ({
     step: 0,
     matchName: '',
     gameNum: '1',
+    colors: loadColors(),
     blue: emptyTeam(),
     red: emptyTeam(),
   }))
@@ -445,6 +600,26 @@ export default function App() {
     if (draftUp && draft.step >= LAST_PHASE) take(draft)
   }
 
+  // Recolouring is a live correction as often as a pre-show setting, so it
+  // reaches air the moment it changes rather than waiting on Sync.
+  const setColors = (colors: DraftColors) => {
+    const next = { ...draft, colors }
+    setDraft(next)
+    try {
+      localStorage.setItem(COLORS_KEY, JSON.stringify(colors))
+    } catch {
+      // No storage: the colours still go to air, they just do not survive a
+      // reload of this page.
+    }
+    if (draftUp) take(next)
+  }
+
+  const swapSides = () => {
+    const next = { ...draft, blue: draft.red, red: draft.blue }
+    setDraft(next)
+    if (draftUp) take(next)
+  }
+
   return (
     <>
       <header className="bezel">
@@ -483,19 +658,29 @@ export default function App() {
               <TeamPanel
                 side="blue"
                 team={draft.blue}
+                logos={logos}
                 onChange={patchTeam('blue')}
                 onSwap={syncIfLocked}
               />
               <TeamPanel
                 side="red"
                 team={draft.red}
+                logos={logos}
                 onChange={patchTeam('red')}
                 onSwap={syncIfLocked}
               />
             </div>
           </>
         )}
-        {tab === 'Setup' && <OutputPanel />}
+        {tab === 'Setup' && (
+          <>
+            <OutputPanel />
+            <ColorPanel
+              colors={draft.colors ?? DEFAULT_COLORS}
+              onChange={setColors}
+            />
+          </>
+        )}
         </div>
 
         {tab === 'Draft / Ban' && (
@@ -506,6 +691,7 @@ export default function App() {
             onSync={() => take(draft)}
             onHide={hide}
             onClear={clearBoard}
+            onSwapSides={swapSides}
           />
         )}
       </main>
