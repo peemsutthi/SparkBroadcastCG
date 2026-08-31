@@ -47,6 +47,17 @@ const teamLogos = async () => {
   }
 }
 
+// Fonts are a free-form drop too, keyed by filename like team logos — a
+// custom font has no shared basename to imply an extension either.
+const fonts = async () => {
+  try {
+    const files = await readdir(`${ASSETS}/fonts`)
+    return files.filter((f) => /\.(ttf|otf|woff2?)$/i.test(f)).sort()
+  } catch {
+    return []
+  }
+}
+
 // A browser cannot discover the address of the machine it runs on, so control
 // asks the relay. Without this the copyable browser-source URL says localhost,
 // which is a dead source the moment OBS is on the streaming PC instead.
@@ -69,6 +80,7 @@ const notFound = (res) => {
 const server = createServer(async (req, res) => {
   if (req.url === '/api/heroes') return json(res, await heroes())
   if (req.url === '/api/teamlogos') return json(res, await teamLogos())
+  if (req.url === '/api/fonts') return json(res, await fonts())
   if (req.url === '/api/host') return json(res, { host: lanAddress() })
 
   if (req.url.startsWith('/assets/')) {

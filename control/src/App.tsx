@@ -3,13 +3,14 @@ import type { ReactNode } from 'react'
 import { API, useRelay } from './relay'
 import {
   DEFAULT_COLORS,
+  DEFAULT_FONTS,
   DONE_STEP,
   LAST_PHASE,
   SWAP_STEP,
   emptyTeam,
   phaseLabel,
 } from '../../shared/draft'
-import type { DraftColors, DraftState, Team } from '../../shared/draft'
+import type { DraftColors, DraftFonts, DraftState, Team } from '../../shared/draft'
 import './App.css'
 
 const TABS = ['Draft / Ban', 'Setup'] as const
@@ -18,6 +19,7 @@ type Tab = (typeof TABS)[number]
 const GAMES = [1, 2, 3, 4, 5, 6, 7]
 
 const COLORS_KEY = 'sparkcg.colors'
+const FONTS_KEY = 'sparkcg.fonts'
 
 /** Colours are a show setting, not part of a draft — they are set once and
  *  should outlive the reload that puts the board back to step 0. Spread over
@@ -28,6 +30,17 @@ const loadColors = (): DraftColors => {
     return { ...DEFAULT_COLORS, ...saved }
   } catch {
     return DEFAULT_COLORS // no storage, or someone hand-edited the value
+  }
+}
+
+/** Same reasoning as loadColors: a show setting, not draft state — it must
+ *  survive the reload that resets the board to step 0. */
+const loadFonts = (): DraftFonts => {
+  try {
+    const saved = JSON.parse(localStorage.getItem(FONTS_KEY) ?? '{}')
+    return { ...DEFAULT_FONTS, ...saved }
+  } catch {
+    return DEFAULT_FONTS
   }
 }
 
@@ -86,6 +99,19 @@ function useTeamLogos() {
       .catch(() => {}) // relay down: dropdown just stays empty
   }, [])
   return logos
+}
+
+/** The font roster, read off assets/fonts the same way team logos are — a
+ *  file drop, no code change. */
+function useFonts() {
+  const [fonts, setFonts] = useState<string[]>([])
+  useEffect(() => {
+    fetch(`${API}/api/fonts`)
+      .then((r) => r.json())
+      .then(setFonts)
+      .catch(() => {}) // relay down: dropdown just stays empty
+  }, [])
+  return fonts
 }
 
 const at = (xs: string[], i: number, v: string) =>
@@ -370,30 +396,80 @@ function Swatch({
   )
 }
 
-/** Set once per show, so it sits in Setup rather than beside the fields the
- *  operator drives the draft from. One colour per element, not per side: the
- *  hud art carries team identity, the text does not. */
-function ColorPanel({
-  colors,
-  onChange,
+/** Colour and font for one element, stacked — the font choice sits directly
+ *  under the swatch it dresses rather than in a shared field, since each of
+ *  the three elements picks its own family. */
+function StyleField({
+  label,
+  color,
+  onColorChange,
+  font,
+  fontFiles,
+  onFontChange,
 }: {
-  colors: DraftColors
-  onChange: (c: DraftColors) => void
+  label: string
+  color: string
+  onColorChange: (v: string) => void
+  font: string
+  fontFiles: string[]
+  onFontChange: (v: string) => void
 }) {
   return (
-    <Panel legend="Colours">
+    <div className="field-stack">
+      <Swatch label={label} value={color} onChange={onColorChange} />
+      <label className="field field-logo">
+        <select value={font} onChange={(e) => onFontChange(e.target.value)}>
+          <option value="">Default</option>
+          {fontFiles.map((f) => (
+            <option key={f} value={f}>
+              {f}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  )
+}
+
+/** Set once per show, so it sits in Setup rather than beside the fields the
+ *  operator drives the draft from. One colour and one font per element, not
+ *  per side: the hud art carries team identity, the text does not. */
+function ColorPanel({
+  colors,
+  onColorsChange,
+  fonts,
+  fontFiles,
+  onFontsChange,
+}: {
+  colors: DraftColors
+  onColorsChange: (c: DraftColors) => void
+  fonts: DraftFonts
+  fontFiles: string[]
+  onFontsChange: (f: DraftFonts) => void
+}) {
+  return (
+    <Panel legend="Text Styling">
       {SWATCHES.map(({ key, label }) => (
-        <Swatch
+        <StyleField
           key={key}
           label={label}
-          value={colors[key]}
-          onChange={(v) => onChange({ ...colors, [key]: v })}
+          color={colors[key]}
+          onColorChange={(v) => onColorsChange({ ...colors, [key]: v })}
+          font={fonts[key]}
+          fontFiles={fontFiles}
+          onFontChange={(v) => onFontsChange({ ...fonts, [key]: v })}
         />
       ))}
 
       <div className="field">
         <span className="legend">Reset</span>
-        <button className="btn" onClick={() => onChange(DEFAULT_COLORS)}>
+        <button
+          className="btn"
+          onClick={() => {
+            onColorsChange(DEFAULT_COLORS)
+            onFontsChange(DEFAULT_FONTS) // the panel owns both, so reset both
+          }}
+        >
           Defaults
         </button>
       </div>
@@ -545,12 +621,14 @@ export default function App() {
   const { live, onAir, send } = useRelay()
   const heroes = useHeroes()
   const logos = useTeamLogos()
+  const fontFiles = useFonts()
 
   const [draft, setDraft] = useState<DraftState>(() => ({
     step: 0,
     matchName: '',
     gameNum: '1',
     colors: loadColors(),
+    fonts: loadFonts(),
     blue: emptyTeam(),
     red: emptyTeam(),
   }))
@@ -609,6 +687,20 @@ export default function App() {
       localStorage.setItem(COLORS_KEY, JSON.stringify(colors))
     } catch {
       // No storage: the colours still go to air, they just do not survive a
+      // reload of this page.
+    }
+    if (draftUp) take(next)
+  }
+
+  // Same treatment as setColors: a live correction as often as a pre-show
+  // setting, so it reaches air immediately and outlives a reload.
+  const setFonts = (fonts: DraftFonts) => {
+    const next = { ...draft, fonts }
+    setDraft(next)
+    try {
+      localStorage.setItem(FONTS_KEY, JSON.stringify(fonts))
+    } catch {
+      // No storage: the fonts still go to air, they just do not survive a
       // reload of this page.
     }
     if (draftUp) take(next)
@@ -677,7 +769,10 @@ export default function App() {
             <OutputPanel />
             <ColorPanel
               colors={draft.colors ?? DEFAULT_COLORS}
-              onChange={setColors}
+              onColorsChange={setColors}
+              fonts={draft.fonts ?? DEFAULT_FONTS}
+              fontFiles={fontFiles}
+              onFontsChange={setFonts}
             />
           </>
         )}

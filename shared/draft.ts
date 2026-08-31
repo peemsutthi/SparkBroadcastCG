@@ -62,6 +62,22 @@ export const DEFAULT_COLORS: DraftColors = {
   matchInfo: '#5973b3',
 }
 
+// Same three elements as DraftColors, one filename in assets/fonts per
+// element rather than one family for everything — a scoreboard font and a
+// name-plate font are picked independently. '' falls back to cg's own
+// default font for that element.
+export type DraftFonts = {
+  teamName: string
+  score: string
+  matchInfo: string
+}
+
+export const DEFAULT_FONTS: DraftFonts = {
+  teamName: '',
+  score: '',
+  matchInfo: '',
+}
+
 export type DraftState = {
   step: number
   hiding?: boolean
@@ -70,6 +86,7 @@ export type DraftState = {
   // Optional: a take sent before this field existed still has to render, and
   // cg fills the gap from DEFAULT_COLORS.
   colors?: DraftColors
+  fonts?: DraftFonts
   blue: Team
   red: Team
 }
