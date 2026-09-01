@@ -198,6 +198,14 @@
   flex: 0 0 11rem;
 }
 
+/* Which CG the next press reaches. Pushed to the far end of the match row —
+   it addresses everything in the rack, so it does not sit among the fields
+   that only describe the match. */
+.field-target {
+  flex: 0 0 11rem;
+  margin-left: auto;
+}
+
 /* A colour swatch with its font select stacked directly under it, as one
    unit that wraps in panel-content like any other field. No gap: the two
    read as one control, not two fields that happen to be near each other. */

@@ -6,6 +6,7 @@ import {
   DEFAULT_FONTS,
   DONE_STEP,
   LAST_PHASE,
+  OUTPUTS,
   SWAP_STEP,
   emptyTeam,
   phaseLabel,
@@ -286,13 +287,20 @@ function TeamPanel({
   )
 }
 
+/** The match line, and the output every take from this page is addressed to.
+ *  The target sits here rather than in Setup: it decides which CG the next
+ *  press reaches, so it belongs where the operator can see it mid-show. */
 function MatchPanel({
   matchName,
   gameNum,
+  output,
+  onOutputChange,
   onChange,
 }: {
   matchName: string
   gameNum: string
+  output: number
+  onOutputChange: (n: number) => void
   onChange: (patch: Partial<DraftState>) => void
 }) {
   const name = matchName
@@ -338,6 +346,15 @@ function MatchPanel({
           </button>
         </div>
       </div>
+
+      <label className="field field-target">
+        <span className="legend">Target Output Channel</span>
+        <select value={output} onChange={(e) => onOutputChange(Number(e.target.value))}>
+          {OUTPUTS.map((n) => (
+            <option key={n} value={n}>{`Output ${n}`}</option>
+          ))}
+        </select>
+      </label>
     </Panel>
   )
 }
@@ -477,12 +494,11 @@ function ColorPanel({
   )
 }
 
+/** One browser-source URL per output. The host comes from the relay, not from
+ *  this page: control is usually open on localhost, and a localhost URL pasted
+ *  into OBS on the streaming PC is a dead source. */
 function OutputPanel() {
-  // The URL an OBS or vMix browser source points at. The host comes from the
-  // relay, not from this page: control is usually open on localhost, and a
-  // localhost URL pasted into OBS on the streaming PC is a dead source.
   const [host, setHost] = useState(location.hostname)
-  const [note, setNote] = useState('')
 
   useEffect(() => {
     fetch(`${API}/api/host`)
@@ -491,7 +507,20 @@ function OutputPanel() {
       .catch(() => {}) // relay down: this page's own host still works locally
   }, [])
 
-  const url = `${location.protocol}//${host}:5174/?relay=${host}:4000`
+  return (
+    <Panel legend="Output">
+      {OUTPUTS.map((n) => (
+        <OutputRow key={n} output={n} host={host} />
+      ))}
+    </Panel>
+  )
+}
+
+/** Each row owns its own copied/failed note, so copying output 3 does not
+ *  flash a "Copied" beside output 1. */
+function OutputRow({ output, host }: { output: number; host: string }) {
+  const [note, setNote] = useState('')
+  const url = `${location.protocol}//${host}:5174/cg/${output}?relay=${host}:4000`
 
   const copy = async () => {
     try {
@@ -506,20 +535,18 @@ function OutputPanel() {
   }
 
   return (
-    <Panel legend="Output">
-      <div className="field">
-        <span className="legend">Output 1</span>
-        <div className="output-row">
-          <a className="output-url" href={url} target="_blank" rel="noreferrer">
-            {url}
-          </a>
-          <button className="btn" onClick={copy}>
-            Copy
-          </button>
-          {note && <span className="note">{note}</span>}
-        </div>
+    <div className="group">
+      <span className="legend">{`Output ${output}`}</span>
+      <div className="output-row">
+        <a className="output-url" href={url} target="_blank" rel="noreferrer">
+          {url}
+        </a>
+        <button className="btn" onClick={copy}>
+          Copy
+        </button>
+        {note && <span className="note">{note}</span>}
       </div>
-    </Panel>
+    </div>
   )
 }
 
@@ -618,7 +645,11 @@ function Transport({
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('Draft / Ban')
-  const { live, onAir, send } = useRelay()
+  // Which CG every take from this page is addressed to. The relay holds one
+  // state per output, so switching the target leaves the others on air
+  // untouched — and the tally below reads the new target, not the old one.
+  const [output, setOutput] = useState(1)
+  const { live, onAir, send } = useRelay(output)
   const heroes = useHeroes()
   const logos = useTeamLogos()
   const fontFiles = useFonts()
@@ -638,7 +669,7 @@ export default function App() {
   const draftUp = Boolean(onAir['draft'])
 
   const take = (state: DraftState) =>
-    send({ type: 'take', layer: 'draft', template: 'draft', data: state })
+    send({ type: 'take', output, layer: 'draft', template: 'draft', data: state })
 
   const patch = (p: Partial<DraftState>) => setDraft((d) => ({ ...d, ...p }))
 
@@ -656,7 +687,9 @@ export default function App() {
     // then take it down — control owns the timing, cg just plays the class.
     take({ ...draft, hiding: true })
     setDraft((d) => ({ ...d, step: 0 }))
-    setTimeout(() => send({ type: 'clear', layer: 'draft' }), 800)
+    // `output` is the one this hide started on, captured by the closure —
+    // retargeting during the slide-out must not take down a different CG.
+    setTimeout(() => send({ type: 'clear', output, layer: 'draft' }), 800)
   }
 
   // Picks and bans only. Team names, players, scores and the global bans
@@ -744,6 +777,8 @@ export default function App() {
             <MatchPanel
               matchName={draft.matchName}
               gameNum={draft.gameNum}
+              output={output}
+              onOutputChange={setOutput}
               onChange={patch}
             />
             <div className="teams">

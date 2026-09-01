@@ -46,10 +46,10 @@ const templates: Record<string, ComponentType<TemplateProps>> = {
   draft: Draft,
 }
 
-// Renders only what the relay says is on air. Anything unconditional here goes
-// to air, so no placeholders.
-export default function App() {
-  const { onAir } = useRelay()
+// Renders only what the relay says is on air, and only what is on air for
+// this output. Anything unconditional here goes to air, so no placeholders.
+export default function App({ output }: { output: number }) {
+  const { onAir } = useRelay(output)
 
   return (
     <div className="stage">
