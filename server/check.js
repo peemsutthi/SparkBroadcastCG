@@ -16,13 +16,28 @@ writeFileSync(
 )
 process.on('exit', () => rmSync(FIXTURE, { force: true }))
 
-const server = spawn('node', ['src/index.js'], { stdio: 'inherit' })
+// If a relay is already on this port, our own copy dies on bind and every
+// connect() below lands on the running one instead — and this check sends
+// clears, so on the show machine that is a graphic off air. Only ever talk to
+// a relay we started ourselves; PORT=4100 npm test runs beside a dev one.
+const PORT = process.env.PORT ?? '4000'
+const BASE = `http://localhost:${PORT}`
+
+if (await fetch(`${BASE}/api/host`).then(() => true, () => false)) {
+  console.error(`something is already on :${PORT} — stop it, or set PORT`)
+  process.exit(1)
+}
+
+const server = spawn('node', ['src/index.js'], {
+  stdio: 'inherit',
+  env: { ...process.env, PORT },
+})
 process.on('exit', () => server.kill())
 
 const connect = () =>
   new Promise((resolve, reject) => {
     const attempt = (tries) => {
-      const ws = new WebSocket('ws://localhost:4000')
+      const ws = new WebSocket(`ws://localhost:${PORT}`)
       ws.onopen = () => resolve(ws)
       ws.onerror = () =>
         tries > 0
@@ -50,6 +65,11 @@ const relayed = next(cg)
 control.send(JSON.stringify(take))
 assert.deepEqual(await relayed, take)
 
+// A take with no `output` belongs to output 1. The whole "a browser source
+// still on the old URL keeps working" guarantee rests on this default.
+const old = await connect()
+assert.deepEqual(Object.keys((await next(old)).onAir), ['1/lower-third'])
+
 // garbage must not kill the relay
 const stillAlive = next(cg)
 control.send('not json')
@@ -60,17 +80,35 @@ assert.equal((await stillAlive).type, 'clear')
 const late = await connect()
 assert.deepEqual((await next(late)).onAir, {})
 
+// Outputs hold separate state. A take addressed to output 2 must not reach
+// /cg/1, and clearing output 1 must leave output 2 up — four browser sources
+// share this one relay, and a leak between them is a wrong graphic on air.
+const onTwo = { type: 'take', output: 2, layer: 'draft', template: 'draft', data: {} }
+const echoed = next(cg)
+control.send(JSON.stringify(onTwo))
+await echoed
+
+const two = await connect()
+assert.deepEqual(Object.keys((await next(two)).onAir), ['2/draft'])
+
+const clearedOne = next(cg)
+control.send(JSON.stringify({ type: 'clear', output: 1, layer: 'draft' }))
+await clearedOne
+
+const stillTwo = await connect()
+assert.deepEqual(Object.keys((await next(stillTwo)).onAir), ['2/draft'])
+
 // assets are served, and the traversal escape hatch is shut
-const png = await fetch('http://localhost:4000/assets/chars/__check__.png')
+const png = await fetch(`${BASE}/assets/chars/__check__.png`)
 assert.equal(png.status, 200)
 assert.equal(png.headers.get('content-type'), 'image/png')
 assert.equal(png.headers.get('access-control-allow-origin'), '*')
 
-const escape = await fetch('http://localhost:4000/assets/../package.json')
+const escape = await fetch(`${BASE}/assets/../package.json`)
 assert.notEqual(escape.status, 200)
 
 // The roster endpoint is what control renders from
-const roster = await (await fetch('http://localhost:4000/api/heroes')).json()
+const roster = await (await fetch(`${BASE}/api/heroes`)).json()
 assert.ok(roster.length > 0, 'roster is empty')
 
 // Every hero must exist in every variant folder. A hero present in heropick but
@@ -91,7 +129,7 @@ for (const variant of ['ban', 'globalban', 'heropick']) {
 
 // Control builds the copyable browser-source URL off this. localhost here
 // means every URL an operator pastes into OBS points at the wrong machine.
-const { host } = await (await fetch('http://localhost:4000/api/host')).json()
+const { host } = await (await fetch(`${BASE}/api/host`)).json()
 assert.match(host, /^\d+\.\d+\.\d+\.\d+$|^localhost$/, `bad host: ${host}`)
 
 console.log(`ok — ${roster.length} heroes across 3 variants, host ${host}`)

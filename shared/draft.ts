@@ -36,6 +36,31 @@ export function phaseLabel(step: number): string {
   return `${side} ${action} ${ids.map((id) => id.split('-')[1]).join('–')}`
 }
 
+/** The CG outputs, each rendered by the one cg app at /cg/1 .. /cg/4 and
+ *  held as its own state by the relay. Control routes a take to one of them;
+ *  the array is the source for both control's picker and its output URLs. */
+export const OUTPUTS = [1, 2, 3, 4]
+
+// The relay protocol. Both pages and the server key what is on air by output
+// *and* layer, so a take only replaces the layer on the output it names.
+// `output` is optional on the wire: a message without one belongs to output 1,
+// which is what a browser source still on the pre-multi-output URL sends.
+export type Take = {
+  type: 'take'
+  output?: number
+  layer: string
+  template: string
+  data: Record<string, unknown>
+}
+export type Clear = { type: 'clear'; output?: number; layer: string }
+export type Msg = Take | Clear
+export type OnAir = Record<string, Take>
+
+/** The key a message lands on. The server computes the same string in
+ *  `slot()` — if the two ever disagree, control's tally reads OFF AIR while a
+ *  board is live, so keep them in step. */
+export const slot = (msg: Msg) => `${msg.output ?? 1}/${msg.layer}`
+
 export type Team = {
   name: string
   score: string

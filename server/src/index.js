@@ -5,7 +5,9 @@ import { fileURLToPath } from 'node:url'
 import sirv from 'sirv'
 import { WebSocketServer } from 'ws'
 
-const PORT = 4000
+// 4000 unless told otherwise. The check overrides it so the suite can run
+// beside a dev relay instead of fighting it for the port.
+const PORT = Number(process.env.PORT) || 4000
 
 // Content — character art, sponsor logos, anything that changes with a game
 // patch rather than a code change. One copy, both pages read it from here.
@@ -92,9 +94,14 @@ const server = createServer(async (req, res) => {
 
 const wss = new WebSocketServer({ server })
 
-// layer -> what's currently on it. Replayed to every new client, because OBS
-// reloads the browser source on scene change and it comes back blank.
+// "output/layer" -> what's currently on it. Replayed to every new client,
+// because OBS reloads the browser source on scene change and it comes back
+// blank. Keyed by output as well as layer so /cg/1 and /cg/2 hold different
+// graphics; a message with no output belongs to output 1, which is what an
+// older client (or a browser source still on the pre-multi-output URL) sends.
 const onAir = {}
+
+const slot = (msg) => `${msg.output ?? 1}/${msg.layer}`
 
 const send = (sock, msg) => sock.send(JSON.stringify(msg))
 
@@ -109,8 +116,8 @@ wss.on('connection', (sock) => {
       return // a malformed message must not take the relay down mid-show
     }
 
-    if (msg.type === 'take') onAir[msg.layer] = msg
-    else if (msg.type === 'clear') delete onAir[msg.layer]
+    if (msg.type === 'take') onAir[slot(msg)] = msg
+    else if (msg.type === 'clear') delete onAir[slot(msg)]
 
     // Echo to the sender too: the relay is the single source of truth for
     // what's on air, so control renders what comes back, not what it sent.
