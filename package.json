@@ -3,14 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "description": "Broadcast character generator: control page + CG render page.",
-  "scripts": { 
-    "dev": "concurrently -n SERVER,CONTROL,CG \"npm run dev:server\" \"npm run dev:control\" \"npm run dev:cg\"", 
-    "dev:server": "npm --prefix server run dev", 
-    "dev:control": "npm --prefix control run dev", 
-    "dev:cg": "npm --prefix cg run dev", 
-    "build": "npm run build:control && npm run build:cg", 
-    "build:control": "npm --prefix control run build", 
-    "build:cg": "npm --prefix cg run build" 
+  "workspaces": ["server", "control", "cg"],
+  "scripts": {
+    "dev": "concurrently -n SERVER,CONTROL,CG \"npm run dev -w server\" \"npm run dev -w control\" \"npm run dev -w cg\"",
+    "build": "npm run build -w control -w cg"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"
