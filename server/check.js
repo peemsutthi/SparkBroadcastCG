@@ -1,20 +1,7 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-
-// 1x1 png fixture, written and removed here so the check owns everything it needs
-const CHARS = fileURLToPath(new URL('../assets/chars', import.meta.url))
-const FIXTURE = `${CHARS}/__check__.png`
-mkdirSync(CHARS, { recursive: true })
-writeFileSync(
-  FIXTURE,
-  Buffer.from(
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-    'base64',
-  ),
-)
-process.on('exit', () => rmSync(FIXTURE, { force: true }))
 
 // If a relay is already on this port, our own copy dies on bind and every
 // connect() below lands on the running one instead — and this check sends
@@ -98,15 +85,6 @@ await clearedOne
 const stillTwo = await connect()
 assert.deepEqual(Object.keys((await next(stillTwo)).onAir), ['2/draft'])
 
-// assets are served, and the traversal escape hatch is shut
-const png = await fetch(`${BASE}/assets/chars/__check__.png`)
-assert.equal(png.status, 200)
-assert.equal(png.headers.get('content-type'), 'image/png')
-assert.equal(png.headers.get('access-control-allow-origin'), '*')
-
-const escape = await fetch(`${BASE}/assets/../package.json`)
-assert.notEqual(escape.status, 200)
-
 // The CG stylesheets are served the same way — an operator edits style/*.css
 // and reloads the browser source — and the same escape hatch must be shut.
 const css = await fetch(`${BASE}/style/draft.css`)
@@ -118,13 +96,22 @@ assert.notEqual((await fetch(`${BASE}/style/../package.json`)).status, 200)
 const roster = await (await fetch(`${BASE}/api/heroes`)).json()
 assert.ok(roster.length > 0, 'roster is empty')
 
+// assets are served, and the traversal escape hatch is shut
+const png = await fetch(`${BASE}/assets/ban/${roster[0]}.png`)
+assert.equal(png.status, 200)
+assert.equal(png.headers.get('content-type'), 'image/png')
+assert.equal(png.headers.get('access-control-allow-origin'), '*')
+
+const escape = await fetch(`${BASE}/assets/../package.json`)
+assert.notEqual(escape.status, 200)
+
 // Every hero must exist in every variant folder. A hero present in heropick but
 // missing from globalban is a blank image on air, mid-draft, with no error.
 const ASSETS_DIR = fileURLToPath(new URL('../assets', import.meta.url))
 const pngs = (dir) =>
   new Set(
     readdirSync(`${ASSETS_DIR}/${dir}`)
-      .filter((f) => f.endsWith('.png') && !f.startsWith('__check__'))
+      .filter((f) => f.endsWith('.png'))
       .map((f) => f.slice(0, -4)),
   )
 
