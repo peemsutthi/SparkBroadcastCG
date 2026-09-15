@@ -47,7 +47,6 @@ body {
 /* Silkscreen. Labels are tracked caps; values are mono. */
 .legend {
   font: 600 16px/1 var(--sans);
-  letter-spacing: 0em;
   color: var(--legend);
 }
 

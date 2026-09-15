@@ -91,11 +91,7 @@ export const DEFAULT_COLORS: DraftColors = {
 // element rather than one family for everything — a scoreboard font and a
 // name-plate font are picked independently. '' falls back to cg's own
 // default font for that element.
-export type DraftFonts = {
-  teamName: string
-  score: string
-  matchInfo: string
-}
+export type DraftFonts = DraftColors
 
 export const DEFAULT_FONTS: DraftFonts = {
   teamName: '',

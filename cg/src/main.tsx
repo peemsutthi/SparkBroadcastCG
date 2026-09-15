@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
-import { API } from './relay'
+import { API } from '../../shared/relay'
 import { OUTPUTS } from '../../shared/draft'
 
 // One app serves every output: /cg/1 .. /cg/4. The path is the only thing

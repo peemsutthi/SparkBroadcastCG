@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { slot } from '../../shared/draft'
-import type { Msg, OnAir } from '../../shared/draft'
+import { slot } from './draft'
+import type { Msg, OnAir } from './draft'
 
 // OBS usually runs on the streaming PC, not the machine hosting the relay.
 // Point a page at another host with ?relay=192.168.1.5:4000
@@ -10,7 +10,7 @@ export const API = `http://${HOST}`
 export const ASSETS = `${API}/assets`
 
 /** `output` is which CG output this page speaks for — 1 unless told otherwise. */
-export function useRelay(output = 1, url = `ws://${HOST}`) {
+export function useRelay(output = 1) {
   const [all, setAll] = useState<OnAir>({})
   const [live, setLive] = useState(false)
   const sock = useRef<WebSocket | null>(null)
@@ -20,7 +20,7 @@ export function useRelay(output = 1, url = `ws://${HOST}`) {
     let timer: ReturnType<typeof setTimeout>
 
     const open = () => {
-      const ws = new WebSocket(url)
+      const ws = new WebSocket(`ws://${HOST}`)
       sock.current = ws
       ws.onopen = () => setLive(true)
       ws.onmessage = (e) => {
@@ -47,7 +47,7 @@ export function useRelay(output = 1, url = `ws://${HOST}`) {
       clearTimeout(timer)
       sock.current?.close()
     }
-  }, [url])
+  }, [])
 
   // Every page receives every output's state, because the relay broadcasts one
   // stream to everyone. Keep this page's slice and re-key it by layer, so

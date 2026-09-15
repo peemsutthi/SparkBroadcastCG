@@ -1,7 +1,7 @@
 import type { SyntheticEvent } from 'react'
 import { DEFAULT_COLORS, DEFAULT_FONTS, DRAFT_SEQUENCE } from '../../shared/draft'
 import type { DraftState } from '../../shared/draft'
-import { ASSETS } from './relay'
+import { ASSETS } from '../../shared/relay'
 
 // Art is a file drop, so a hero with no image must go quiet rather than
 // showing a broken icon on air.

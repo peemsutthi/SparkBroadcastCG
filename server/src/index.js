@@ -5,8 +5,6 @@ import { fileURLToPath } from 'node:url'
 import sirv from 'sirv'
 import { WebSocketServer } from 'ws'
 
-// 4000 unless told otherwise. The check overrides it so the suite can run
-// beside a dev relay instead of fighting it for the port.
 const PORT = Number(process.env.PORT) || 4000
 
 // Content — character art, sponsor logos, anything that changes with a game
@@ -16,61 +14,36 @@ const PORT = Number(process.env.PORT) || 4000
 // `node server/src/index.js` launch from different directories, and a cwd-
 // relative path would silently 404 in one of them.
 const ASSETS = fileURLToPath(new URL('../../assets', import.meta.url))
+const STYLE = fileURLToPath(new URL('../../style', import.meta.url))
 
-const assets = sirv(ASSETS, {
-  dev: true,
-  setHeaders: (res) => res.setHeader('Access-Control-Allow-Origin', '*'),
-})
-
-// The CG page's stylesheets, served the same way instead of bundled by Vite,
+// The CG page's stylesheets are served from style/ instead of bundled by Vite
 // so restyling the board is an edit and a browser-source reload — no build,
 // no Node on the editing machine. dev: true is load-bearing, not habit: it
 // makes sirv answer Cache-Control: no-store, and a cached stylesheet would
 // make every edit look like the feature is broken.
-const STYLE = fileURLToPath(new URL('../../style', import.meta.url))
-
-const style = sirv(STYLE, {
+const serve = {
   dev: true,
   setHeaders: (res) => res.setHeader('Access-Control-Allow-Origin', '*'),
-})
-
-// Roster read off disk per request, never hardcoded: adding a hero means
-// dropping three PNGs in, no code change and no restart. Three readdirs is
-// cheap enough that caching would only add a staleness bug.
-const heroes = async () => {
-  try {
-    const files = await readdir(`${ASSETS}/ban`)
-    return files
-      .filter((f) => f.endsWith('.png'))
-      .map((f) => f.slice(0, -4))
-      .sort()
-  } catch {
-    return [] // a missing folder must not take the relay down
-  }
 }
+const assets = sirv(ASSETS, serve)
+const style = sirv(STYLE, serve)
 
-// Team logos are a free-form drop too, but unlike hero art there's no shared
-// basename across folders to imply an extension — so the filename returned
-// (and sent back by control) keeps it.
-const teamLogos = async () => {
-  try {
-    const files = await readdir(`${ASSETS}/teamlogo`)
-    return files.filter((f) => /\.(png|jpe?g|svg|webp)$/i.test(f)).sort()
-  } catch {
-    return []
-  }
-}
+// Rosters are read off disk per request, never hardcoded: adding a hero, a
+// logo or a font is a file drop, no code change and no restart. A readdir is
+// cheap enough that caching would only add a staleness bug, and a missing
+// folder must not take the relay down.
+const list = (dir, ext) =>
+  readdir(`${ASSETS}/${dir}`).then(
+    (files) => files.filter((f) => ext.test(f)).sort(),
+    () => [],
+  )
 
-// Fonts are a free-form drop too, keyed by filename like team logos — a
-// custom font has no shared basename to imply an extension either.
-const fonts = async () => {
-  try {
-    const files = await readdir(`${ASSETS}/fonts`)
-    return files.filter((f) => /\.(ttf|otf|woff2?)$/i.test(f)).sort()
-  } catch {
-    return []
-  }
-}
+// Hero art shares one basename across three folders, so the name is returned
+// without its extension. Logos and fonts have no such pairing, so the filename
+// returned (and sent back by control) keeps it.
+const heroes = () => list('ban', /\.png$/).then((fs) => fs.map((f) => f.slice(0, -4)))
+const teamLogos = () => list('teamlogo', /\.(png|jpe?g|svg|webp)$/i)
+const fonts = () => list('fonts', /\.(ttf|otf|woff2?)$/i)
 
 // A browser cannot discover the address of the machine it runs on, so control
 // asks the relay. Without this the copyable browser-source URL says localhost,

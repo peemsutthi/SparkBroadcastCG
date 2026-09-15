@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { API, useRelay } from './relay'
+import { API, useRelay } from '../../shared/relay'
 import {
   DEFAULT_COLORS,
   DEFAULT_FONTS,
@@ -19,29 +19,14 @@ type Tab = (typeof TABS)[number]
 
 const GAMES = [1, 2, 3, 4, 5, 6, 7]
 
-const COLORS_KEY = 'sparkcg.colors'
-const FONTS_KEY = 'sparkcg.fonts'
-
-/** Colours are a show setting, not part of a draft — they are set once and
+/** Colours and fonts are a show setting, not part of a draft — set once, they
  *  should outlive the reload that puts the board back to step 0. Spread over
  *  the defaults so a key added later fills itself in. */
-const loadColors = (): DraftColors => {
+const load = <T extends object>(key: string, defaults: T): T => {
   try {
-    const saved = JSON.parse(localStorage.getItem(COLORS_KEY) ?? '{}')
-    return { ...DEFAULT_COLORS, ...saved }
+    return { ...defaults, ...JSON.parse(localStorage.getItem(`sparkcg.${key}`) ?? '{}') }
   } catch {
-    return DEFAULT_COLORS // no storage, or someone hand-edited the value
-  }
-}
-
-/** Same reasoning as loadColors: a show setting, not draft state — it must
- *  survive the reload that resets the board to step 0. */
-const loadFonts = (): DraftFonts => {
-  try {
-    const saved = JSON.parse(localStorage.getItem(FONTS_KEY) ?? '{}')
-    return { ...DEFAULT_FONTS, ...saved }
-  } catch {
-    return DEFAULT_FONTS
+    return defaults // no storage, or someone hand-edited the value
   }
 }
 
@@ -74,53 +59,19 @@ function Panel({
   )
 }
 
-/** The roster, read off the relay. Picks and bans autocomplete against it:
+/** A roster read off the relay — heroes, team logos, fonts — each a file drop
+ *  in assets/, no code change. Picks and bans autocomplete against heroes:
  *  a mistyped hero name is a blank image on air with no error anywhere. */
-function useHeroes() {
-  const [heroes, setHeroes] = useState<string[]>([])
+function useList(path: string) {
+  const [items, setItems] = useState<string[]>([])
   useEffect(() => {
-    fetch(`${API}/api/heroes`)
+    fetch(`${API}${path}`)
       .then((r) => r.json())
-      .then(setHeroes)
-      .catch(() => {}) // relay down: the inputs still accept typed names
-  }, [])
-  return heroes
+      .then(setItems)
+      .catch(() => {}) // relay down: inputs still take typed names, dropdowns stay empty
+  }, [path])
+  return items
 }
-
-/** The team logo roster, read off the relay the same way heroes are — a file
- *  drop in assets/teamlogo, no code change. Unlike heroes it's a closed set
- *  the operator picks from, so control renders it as a dropdown, not a
- *  free-typed field. */
-function useTeamLogos() {
-  const [logos, setLogos] = useState<string[]>([])
-  useEffect(() => {
-    fetch(`${API}/api/teamlogos`)
-      .then((r) => r.json())
-      .then(setLogos)
-      .catch(() => {}) // relay down: dropdown just stays empty
-  }, [])
-  return logos
-}
-
-/** The font roster, read off assets/fonts the same way team logos are — a
- *  file drop, no code change. */
-function useFonts() {
-  const [fonts, setFonts] = useState<string[]>([])
-  useEffect(() => {
-    fetch(`${API}/api/fonts`)
-      .then((r) => r.json())
-      .then(setFonts)
-      .catch(() => {}) // relay down: dropdown just stays empty
-  }, [])
-  return fonts
-}
-
-const at = (xs: string[], i: number, v: string) =>
-  xs.map((x, j) => (j === i ? v : x))
-
-// Reads only from the original array, so neither slot can clobber the other.
-const swapAt = (xs: string[], a: number, b: number) =>
-  xs.map((x, i) => (i === a ? xs[b] : i === b ? xs[a] : x))
 
 const SIDES = {
   blue: { legend: 'Blue team', eg: 'team1' },
@@ -148,14 +99,6 @@ function TeamPanel({
   const [from, setFrom] = useState(0)
   const [to, setTo] = useState(4)
 
-  const setName = (v: string) => onChange({ name: v })
-  const setScore = (v: string) => onChange({ score: v })
-  const setLogo = (v: string) => onChange({ logo: v })
-  const setPlayers = (v: string[]) => onChange({ players: v })
-  const setPicks = (v: string[]) => onChange({ picks: v })
-  const setBans = (v: string[]) => onChange({ bans: v })
-  const setPool = (v: string[][]) => onChange({ used: v })
-
   return (
     <Panel
       tone={side}
@@ -166,11 +109,11 @@ function TeamPanel({
         <div className="row">
           <label className="field field-grow">
             <span className="legend">Team</span>
-            <input value={name} onChange={(e) => setName(e.target.value)} placeholder={eg} />
+            <input value={name} onChange={(e) => onChange({ name: e.target.value })} placeholder={eg} />
           </label>
           <label className="field field-logo">
             <span className="legend">Logo</span>
-            <select value={logo} onChange={(e) => setLogo(e.target.value)}>
+            <select value={logo} onChange={(e) => onChange({ logo: e.target.value })}>
               <option value="">None</option>
               {logos.map((f) => (
                 <option key={f} value={f}>
@@ -185,12 +128,12 @@ function TeamPanel({
               <input
                 inputMode="numeric"
                 value={score}
-                onChange={(e) => setScore(e.target.value)}
+                onChange={(e) => onChange({ score: e.target.value })}
               />
               <button
                 type="button"
                 className="btn btn-mini"
-                onClick={() => setScore(String(Number(score || 0) + 1))}
+                onClick={() => onChange({ score: String(Number(score || 0) + 1) })}
               >
                 +1
               </button>
@@ -206,13 +149,13 @@ function TeamPanel({
             <Fragment key={i}>
               <input
                 value={players[i]}
-                onChange={(e) => setPlayers(at(players, i, e.target.value))}
+                onChange={(e) => onChange({ players: players.with(i, e.target.value) })}
                 placeholder={`Player ${i + 1}`}
               />
               <input
                 list="heroes"
                 value={picks[i]}
-                onChange={(e) => setPicks(at(picks, i, e.target.value))}
+                onChange={(e) => onChange({ picks: picks.with(i, e.target.value) })}
                 placeholder={`Pick ${i + 1}`}
               />
             </Fragment>
@@ -239,7 +182,7 @@ function TeamPanel({
           <button
             className="btn"
             onClick={() => {
-              setPicks(swapAt(picks, from, to))
+              onChange({ picks: picks.with(from, picks[to]).with(to, picks[from]) })
               onSwap()
             }}
           >
@@ -256,7 +199,7 @@ function TeamPanel({
               key={i}
               list="heroes"
               value={bans[i]}
-              onChange={(e) => setBans(at(bans, i, e.target.value))}
+              onChange={(e) => onChange({ bans: bans.with(i, e.target.value) })}
               placeholder={`Ban ${i + 1}`}
             />
           ))}
@@ -274,9 +217,7 @@ function TeamPanel({
                   key={i}
                   list="heroes"
                   value={hero}
-                  onChange={(e) =>
-                    setPool(pool.map((r, j) => (j === g ? at(r, i, e.target.value) : r)))
-                  }
+                  onChange={(e) => onChange({ used: pool.with(g, row.with(i, e.target.value)) })}
                 />
               ))}
             </Fragment>
@@ -650,16 +591,16 @@ export default function App() {
   // untouched — and the tally below reads the new target, not the old one.
   const [output, setOutput] = useState(1)
   const { live, onAir, send } = useRelay(output)
-  const heroes = useHeroes()
-  const logos = useTeamLogos()
-  const fontFiles = useFonts()
+  const heroes = useList('/api/heroes')
+  const logos = useList('/api/teamlogos')
+  const fontFiles = useList('/api/fonts')
 
   const [draft, setDraft] = useState<DraftState>(() => ({
     step: 0,
     matchName: '',
     gameNum: '1',
-    colors: loadColors(),
-    fonts: loadFonts(),
+    colors: load('colors', DEFAULT_COLORS),
+    fonts: load('fonts', DEFAULT_FONTS),
     blue: emptyTeam(),
     red: emptyTeam(),
   }))
@@ -711,30 +652,16 @@ export default function App() {
     if (draftUp && draft.step >= LAST_PHASE) take(draft)
   }
 
-  // Recolouring is a live correction as often as a pre-show setting, so it
-  // reaches air the moment it changes rather than waiting on Sync.
-  const setColors = (colors: DraftColors) => {
-    const next = { ...draft, colors }
+  // Restyling is a live correction as often as a pre-show setting, so it
+  // reaches air the moment it changes rather than waiting on Sync — and is
+  // saved so it outlives a reload of this page.
+  const setStyle = (field: 'colors' | 'fonts', value: DraftColors | DraftFonts) => {
+    const next = { ...draft, [field]: value }
     setDraft(next)
     try {
-      localStorage.setItem(COLORS_KEY, JSON.stringify(colors))
+      localStorage.setItem(`sparkcg.${field}`, JSON.stringify(value))
     } catch {
-      // No storage: the colours still go to air, they just do not survive a
-      // reload of this page.
-    }
-    if (draftUp) take(next)
-  }
-
-  // Same treatment as setColors: a live correction as often as a pre-show
-  // setting, so it reaches air immediately and outlives a reload.
-  const setFonts = (fonts: DraftFonts) => {
-    const next = { ...draft, fonts }
-    setDraft(next)
-    try {
-      localStorage.setItem(FONTS_KEY, JSON.stringify(fonts))
-    } catch {
-      // No storage: the fonts still go to air, they just do not survive a
-      // reload of this page.
+      // No storage: it still goes to air, it just does not survive a reload.
     }
     if (draftUp) take(next)
   }
@@ -804,10 +731,10 @@ export default function App() {
             <OutputPanel />
             <ColorPanel
               colors={draft.colors ?? DEFAULT_COLORS}
-              onColorsChange={setColors}
+              onColorsChange={(c) => setStyle('colors', c)}
               fonts={draft.fonts ?? DEFAULT_FONTS}
               fontFiles={fontFiles}
-              onFontsChange={setFonts}
+              onFontsChange={(f) => setStyle('fonts', f)}
             />
           </>
         )}
