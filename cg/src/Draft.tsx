@@ -2,7 +2,6 @@ import type { SyntheticEvent } from 'react'
 import { DEFAULT_COLORS, DEFAULT_FONTS, DRAFT_SEQUENCE } from '../../shared/draft'
 import type { DraftState } from '../../shared/draft'
 import { ASSETS } from './relay'
-import './draft.css'
 
 // Art is a file drop, so a hero with no image must go quiet rather than
 // showing a broken icon on air.
@@ -42,7 +41,7 @@ const NAME_SIZE = 65
 const NAME_MIN = 20 // absolute floor: small beats cut off
 const WRAP_BELOW = 34 // one line under this is too small to read on air
 
-/** The name plate is a fixed width (.draft-team-name in draft.css), so a
+/** The name plate is a fixed width (.draft-team-name in style/draft.css), so a
  *  long name is fitted, never cut. One line if it can; a two-word name that
  *  would shrink past legible wraps instead, which keeps the type twice the
  *  size. Runs off a ref keyed to the name and the font, so it re-measures

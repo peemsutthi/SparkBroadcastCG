@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import './index.css'
 import App from './App.tsx'
+import { API } from './relay'
 import { OUTPUTS } from '../../shared/draft'
 
 // One app serves every output: /cg/1 .. /cg/4. The path is the only thing
@@ -12,6 +12,20 @@ import { OUTPUTS } from '../../shared/draft'
 // for its first graphic.
 const asked = Number(location.pathname.match(/\/cg\/(\d+)/)?.[1])
 const output = OUTPUTS.includes(asked) ? asked : 1
+
+// Stylesheets come from the relay (style/ at the repo root), not the bundle,
+// so a colour change is an edit and a browser-source reload — no build, no
+// Node on the editing machine. The host is API from relay.ts, never re-parsed
+// here: a second definition of the relay host would drift. No unstyled flash
+// to guard against: App renders nothing until the relay's sync arrives, a
+// round trip to the same host serving these — and if that host is down, the
+// socket is down too and nothing is on air.
+for (const file of ['index.css', 'App.css', 'draft.css']) {
+  const link = document.createElement('link')
+  link.rel = 'stylesheet'
+  link.href = `${API}/style/${file}`
+  document.head.append(link)
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

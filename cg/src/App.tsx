@@ -1,7 +1,6 @@
 import type { ComponentType } from 'react'
 import Draft from './Draft'
 import { ASSETS, useRelay } from './relay'
-import './App.css'
 
 type TemplateProps = { data: Record<string, unknown> }
 

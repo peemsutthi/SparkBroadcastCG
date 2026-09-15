@@ -107,6 +107,13 @@ assert.equal(png.headers.get('access-control-allow-origin'), '*')
 const escape = await fetch(`${BASE}/assets/../package.json`)
 assert.notEqual(escape.status, 200)
 
+// The CG stylesheets are served the same way — an operator edits style/*.css
+// and reloads the browser source — and the same escape hatch must be shut.
+const css = await fetch(`${BASE}/style/draft.css`)
+assert.equal(css.status, 200)
+assert.equal(css.headers.get('content-type'), 'text/css')
+assert.notEqual((await fetch(`${BASE}/style/../package.json`)).status, 200)
+
 // The roster endpoint is what control renders from
 const roster = await (await fetch(`${BASE}/api/heroes`)).json()
 assert.ok(roster.length > 0, 'roster is empty')

@@ -22,6 +22,18 @@ const assets = sirv(ASSETS, {
   setHeaders: (res) => res.setHeader('Access-Control-Allow-Origin', '*'),
 })
 
+// The CG page's stylesheets, served the same way instead of bundled by Vite,
+// so restyling the board is an edit and a browser-source reload — no build,
+// no Node on the editing machine. dev: true is load-bearing, not habit: it
+// makes sirv answer Cache-Control: no-store, and a cached stylesheet would
+// make every edit look like the feature is broken.
+const STYLE = fileURLToPath(new URL('../../style', import.meta.url))
+
+const style = sirv(STYLE, {
+  dev: true,
+  setHeaders: (res) => res.setHeader('Access-Control-Allow-Origin', '*'),
+})
+
 // Roster read off disk per request, never hardcoded: adding a hero means
 // dropping three PNGs in, no code change and no restart. Three readdirs is
 // cheap enough that caching would only add a staleness bug.
@@ -89,6 +101,10 @@ const server = createServer(async (req, res) => {
     req.url = req.url.slice('/assets'.length)
     return assets(req, res, () => notFound(res))
   }
+  if (req.url.startsWith('/style/')) {
+    req.url = req.url.slice('/style'.length)
+    return style(req, res, () => notFound(res))
+  }
   notFound(res)
 })
 
@@ -130,4 +146,5 @@ wss.on('connection', (sock) => {
 server.listen(PORT, () => {
   console.log(`sparkcg relay on ws://localhost:${PORT}`)
   console.log(`assets on http://localhost:${PORT}/assets/`)
+  console.log(`style on http://localhost:${PORT}/style/`)
 })
