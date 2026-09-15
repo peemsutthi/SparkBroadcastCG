@@ -18,7 +18,9 @@ The operator can control a ban/pick sequence via a control page in a browser.The
 Clone the repo and install the dependencies:
 
 ```sh
-git clone https://github.com/peemsutthi/SparkBroadcastCG.git cd SparkBroadcastCG npm install
+git clone https://github.com/peemsutthi/SparkBroadcastCG.git
+cd SparkBroadcastCG
+npm install
 ```
 
 ### Run
@@ -46,6 +48,7 @@ The Control page sends commands to the server, which stores and broadcasts the c
 ```sh
 {
   type: 'take',
+  output: 1,
   layer: 'draft',
   template: 'draft',
   data: { ...DraftState }
@@ -57,9 +60,13 @@ The Control page sends commands to the server, which stores and broadcasts the c
 ```sh
 {
   type: 'clear',
+  output: 1,
   layer: 'draft'
 }
 ```
+
+`output` picks which of the 4 CG outputs the command targets and defaults to
+1 when omitted, so a browser source left on an old URL keeps working.
 
 When a client connects, the server immediately sends:
 
@@ -80,6 +87,7 @@ All game and broadcast assets are stored in the root `assets/` directory.
 assets/ban/charname.png        72x72    pick-phase ban icon
 assets/globalban/charname.png  72x72    global ban icon
 assets/heropick/charname.png   138x250  pick splash art
+assets/teamlogo/               any size  team logo, picked by filename
 assets/overlayhud/hud.png  1920x1080
 assets/fonts/
 ```
@@ -89,19 +97,22 @@ Served at `http://localhost:4000/assets/...`. The roster is read off disk at
 
 ## OBS / vMix
 
-Use the CG Page as a Browser Source.
-
-CG URL:
+Use the CG page as a Browser Source, one per output (1-4):
 
 ```sh
-http://localhost:5174
+http://localhost:5174/cg/1
 ```
+
+If OBS runs on a different machine than the relay, use control's Setup tab
+to get the right URL for each output instead of typing `localhost` — a
+browser can't know its own LAN address.
 
 ## Project Structure
 
 ```text
 SparkBroadcastCG/
-├── assets/          # Game and broadcast assets (ban/, globalban/, heropick/, overlayhud/, fonts/)
+├── assets/          # Game and broadcast assets (ban/, globalban/, heropick/, teamlogo/, overlayhud/, fonts/)
+├── style/           # CG stylesheets, served as-is — edit and reload, no rebuild
 ├── control/         # Control panel (Vite + React), :5173
 ├── cg/              # Broadcast CG render surface (Vite + React), :5174
 ├── server/          # WebSocket relay + asset/API server, :4000
