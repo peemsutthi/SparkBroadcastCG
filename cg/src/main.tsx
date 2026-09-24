@@ -20,7 +20,7 @@ const output = OUTPUTS.includes(asked) ? asked : 1
 // to guard against: App renders nothing until the relay's sync arrives, a
 // round trip to the same host serving these — and if that host is down, the
 // socket is down too and nothing is on air.
-for (const file of ['index.css', 'App.css', 'draft.css']) {
+for (const file of ['index.css', 'draft.css']) {
   const link = document.createElement('link')
   link.rel = 'stylesheet'
   link.href = `${API}/style/${file}`

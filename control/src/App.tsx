@@ -244,21 +244,19 @@ function MatchPanel({
   onOutputChange: (n: number) => void
   onChange: (patch: Partial<DraftState>) => void
 }) {
-  const name = matchName
   const game = Number(gameNum)
-  const setName = (v: string) => onChange({ matchName: v })
   const setGame = (n: number) => onChange({ gameNum: String(n) })
 
   return (
     <Panel
       legend="Match"
-      readout={`${name.trim() || '—'} · GAME ${gameNum || '—'}`.toUpperCase()}
+      readout={`${matchName.trim() || '—'} · GAME ${gameNum || '—'}`.toUpperCase()}
     >
       <label className="field field-wide">
         <span className="legend">Match name</span>
         <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          value={matchName}
+          onChange={(e) => onChange({ matchName: e.target.value })}
           placeholder="Match name"
         />
       </label>
