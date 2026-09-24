@@ -1,12 +1,19 @@
 # SparkBroadcastCG RoV BroadcastCG overlays
 
-Thanks to @LoongPaan for the codes, ideas and for the amazing suppport! <3
+Thanks to @LoongPaan for the codes, ideas and for the amazing support! <3
 
-This program is a live-stream CG overlays during the BAN/PICK phases for Arena of Valor / RoV broadcasts systems.
+Live-stream CG overlays for the ban/pick phase of Arena of Valor / RoV broadcasts.
 
-The operator can control a ban/pick sequence via a control page in a browser.The output page render 1920×1080 transparent overlays that OBS or vMix can used as input as Browser Sources.
+The operator drives the ban/pick sequence from a control page in the browser. The output pages render 1920×1080 transparent overlays that OBS or vMix use as Browser Sources.
 
-## Quick Start
+## Download (Windows, no install)
+
+Get `SparkCG-windows.zip` from the
+[Releases](https://github.com/peemsutthi/SparkBroadcastCG/releases) page,
+unzip it, and double-click `SparkCG.exe`. See
+[Running the shipped app](#running-the-shipped-app) below.
+
+## Develop
 
 ### Requirements
 
@@ -39,13 +46,26 @@ cd control && npm run dev     # operator UI, :5173
 cd cg      && npm run dev     # render surface, :5174
 ```
 
+### Check
+
+```sh
+npm test            # relay protocol + asset checks
+npm run typecheck   # control, cg and shared/
+npm run lint
+npm run build       # typecheck, then build both pages into app/
+```
+
 ## Ship to a Windows show machine
 
 ```sh
 npm run ship
 ```
 
-Copy `release/SparkCG/` to the Windows PC. It needs nothing installed.
+This builds `release/SparkCG/` — `SparkCG.exe` plus `style/`, `assets/` and
+`app/`. Zip it and attach it to a GitHub Release, or copy it straight to the
+Windows PC. It needs nothing installed. It builds from macOS or Windows.
+
+### Running the shipped app
 
 - Double-click `SparkCG.exe` — the control page opens in the browser.
   First run: SmartScreen says *More info → Run anyway* (the exe is unsigned),
@@ -115,10 +135,11 @@ Served at `http://localhost:4000/assets/...`. The roster is read off disk at
 
 ## OBS / vMix
 
-Use the CG page as a Browser Source, one per output (1-4):
+Use the CG page as a Browser Source, one per output (1-4), sized 1920×1080:
 
 ```sh
-http://localhost:5174/cg/1
+http://<relay-pc>:4000/cg/1     # shipped app
+http://localhost:5174/cg/1      # npm run dev
 ```
 
 If OBS runs on a different machine than the relay, use control's Setup tab
@@ -134,8 +155,12 @@ SparkBroadcastCG/
 ├── control/         # Control panel (Vite + React), :5173
 ├── cg/              # Broadcast CG render surface (Vite + React), :5174
 ├── server/          # WebSocket relay + asset/API server, :4000
-├── shared/          # Shared types / utils
+├── shared/          # Code both pages use: pick/ban order, message types, relay hook
+├── scripts/         # ship.mjs — builds the Windows release
 ├── legacy/          # Original single-file prototype (control.html, output.html) for reference only
-├── package.json     # Root dev/build scripts
-└── README.md
+├── app/             # (generated) built control + cg, served by the relay — npm run build
+├── release/         # (generated) the Windows folder — npm run ship
+├── package.json     # All dependencies and scripts
+├── tsconfig.json    # One typecheck for control, cg and shared/
+└── eslint.config.js # One lint for control, cg and shared/
 ```
