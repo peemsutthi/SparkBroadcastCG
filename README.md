@@ -39,6 +39,24 @@ cd control && npm run dev     # operator UI, :5173
 cd cg      && npm run dev     # render surface, :5174
 ```
 
+## Ship to a Windows show machine
+
+```sh
+npm run ship
+```
+
+Copy `release/SparkCG/` to the Windows PC. It needs nothing installed.
+
+- Double-click `SparkCG.exe` — the control page opens in the browser.
+  First run: SmartScreen says *More info → Run anyway* (the exe is unsigned),
+  and allow the firewall prompt so OBS on another PC can reach port 4000.
+- The OBS browser-source URLs are in control's **Setup** tab
+  (`http://<this-pc>:4000/cg/1` … `/cg/4`).
+- Edit `style/*.css` and reload the browser source to restyle live.
+- Drop hero PNGs into `assets/ban`, `assets/globalban`, `assets/heropick`
+  (same filename in all three) — no restart.
+- Close the console window to stop.
+
 ## Protocol
 
 The Control page sends commands to the server, which stores and broadcasts the current state to all connected clients.

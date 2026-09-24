@@ -24,3 +24,7 @@ assets/samplehud/
 *.njsproj
 *.sln
 *.sw?
+
+# built pages and the shipped folder (npm run build / npm run ship)
+app/
+release/

@@ -459,7 +459,10 @@ function OutputPanel() {
  *  flash a "Copied" beside output 1. */
 function OutputRow({ output, host }: { output: number; host: string }) {
   const [note, setNote] = useState('')
-  const url = `${location.protocol}//${host}:5174/cg/${output}?relay=${host}:4000`
+  // Built, the relay serves cg itself; in dev cg is its own Vite server.
+  const url = import.meta.env.DEV
+    ? `http://${host}:5174/cg/${output}?relay=${host}:4000`
+    : `http://${host}:${location.port}/cg/${output}`
 
   const copy = async () => {
     try {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { readdirSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
 // If a relay is already on this port, our own copy dies on bind and every
@@ -91,6 +91,16 @@ const css = await fetch(`${BASE}/style/draft.css`)
 assert.equal(css.status, 200)
 assert.equal(css.headers.get('content-type'), 'text/css')
 assert.notEqual((await fetch(`${BASE}/style/../package.json`)).status, 200)
+
+// Built, the relay serves the pages too: the shipped folder is one port. /cg/2
+// must fall back to cg's index (not control's), or OBS shows the operator UI.
+if (existsSync(fileURLToPath(new URL('../app/cg', import.meta.url)))) {
+  const page = await (await fetch(`${BASE}/cg/2`)).text()
+  assert.match(page, /\/cg\/assets\//, '/cg/2 is not the cg page')
+  const home = await fetch(`${BASE}/`)
+  assert.equal(home.status, 200)
+  assert.match(home.headers.get('content-type'), /text\/html/)
+}
 
 // The roster endpoint is what control renders from
 const roster = await (await fetch(`${BASE}/api/heroes`)).json()

@@ -1,6 +1,9 @@
+import { exec } from 'node:child_process'
 import { readdir } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { networkInterfaces } from 'node:os'
+import { dirname } from 'node:path'
+import sea from 'node:sea'
 import { fileURLToPath } from 'node:url'
 import sirv from 'sirv'
 import { WebSocketServer } from 'ws'
@@ -12,9 +15,13 @@ const PORT = Number(process.env.PORT) || 4000
 // sirv handles mime types, caching and (importantly) path traversal.
 // Resolved from this file, not from cwd: `npm run dev` and
 // `node server/src/index.js` launch from different directories, and a cwd-
-// relative path would silently 404 in one of them.
-const ASSETS = fileURLToPath(new URL('../../assets', import.meta.url))
-const STYLE = fileURLToPath(new URL('../../style', import.meta.url))
+// relative path would silently 404 in one of them. Shipped as SparkCG.exe the
+// root is the folder the exe sits in — that is what keeps style/ and assets/
+// editable after shipping.
+const SHIPPED = sea.isSea()
+const ROOT = SHIPPED ? dirname(process.execPath) : fileURLToPath(new URL('../..', import.meta.url))
+const ASSETS = `${ROOT}/assets`
+const STYLE = `${ROOT}/style`
 
 // The CG page's stylesheets are served from style/ instead of bundled by Vite
 // so restyling the board is an edit and a browser-source reload — no build,
@@ -27,6 +34,13 @@ const serve = {
 }
 const assets = sirv(ASSETS, serve)
 const style = sirv(STYLE, serve)
+
+// The built pages (`npm run build` → app/). Served here so the shipped folder
+// is one process on one port: control at /, cg at /cg/N. single: true is the
+// SPA fallback that turns /cg/2 into cg's index.html. Absent before a build,
+// which just 404s like before.
+const cg = sirv(`${ROOT}/app/cg`, { single: true })
+const control = sirv(`${ROOT}/app/control`, { single: true })
 
 // Rosters are read off disk per request, never hardcoded: adding a hero, a
 // logo or a font is a file drop, no code change and no restart. A readdir is
@@ -78,7 +92,11 @@ const server = createServer(async (req, res) => {
     req.url = req.url.slice('/style'.length)
     return style(req, res, () => notFound(res))
   }
-  notFound(res)
+  if (req.url === '/cg' || req.url.startsWith('/cg/')) {
+    req.url = req.url.slice('/cg'.length) || '/'
+    return cg(req, res, () => notFound(res))
+  }
+  control(req, res, () => notFound(res))
 })
 
 const wss = new WebSocketServer({ server })
@@ -116,8 +134,23 @@ wss.on('connection', (sock) => {
   })
 })
 
+// Shipped only: double-clicking the exe should land the operator on control.
+// ponytail: Windows `start` only; macOS build will need `open`.
+const openControl = () => exec(`start "" http://localhost:${PORT}`)
+
+// Double-clicked twice: the relay is already up, so show it instead of dying.
+server.on('error', (err) => {
+  if (!SHIPPED || err.code !== 'EADDRINUSE') throw err
+  openControl()
+  setTimeout(() => process.exit(0), 1000)
+})
+
 server.listen(PORT, () => {
   console.log(`sparkcg relay on ws://localhost:${PORT}`)
-  console.log(`assets on http://localhost:${PORT}/assets/`)
-  console.log(`style on http://localhost:${PORT}/style/`)
+  console.log(`control on http://localhost:${PORT}/`)
+  console.log(`cg on http://${lanAddress()}:${PORT}/cg/1 .. /cg/4`)
+  if (SHIPPED) {
+    console.log('close this window to stop the relay')
+    openControl()
+  }
 })

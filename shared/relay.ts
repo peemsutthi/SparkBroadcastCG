@@ -3,8 +3,11 @@ import { slot } from './draft'
 import type { Msg, OnAir } from './draft'
 
 // OBS usually runs on the streaming PC, not the machine hosting the relay.
-// Point a page at another host with ?relay=192.168.1.5:4000
-const HOST = new URLSearchParams(location.search).get('relay') ?? 'localhost:4000'
+// Point a page at another host with ?relay=192.168.1.5:4000. Built, the pages
+// are served by the relay itself, so their own host is the relay.
+const HOST =
+  new URLSearchParams(location.search).get('relay') ??
+  (import.meta.env.DEV ? 'localhost:4000' : location.host)
 
 export const API = `http://${HOST}`
 export const ASSETS = `${API}/assets`
