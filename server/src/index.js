@@ -1,4 +1,5 @@
 import { exec } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { readdir } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { networkInterfaces } from 'node:os'
@@ -37,10 +38,12 @@ const style = sirv(STYLE, serve)
 
 // The built pages (`npm run build` → app/). Served here so the shipped folder
 // is one process on one port: control at /, cg at /cg/N. single: true is the
-// SPA fallback that turns /cg/2 into cg's index.html. Absent before a build,
-// which just 404s like before.
-const cg = sirv(`${ROOT}/app/cg`, { single: true })
-const control = sirv(`${ROOT}/app/control`, { single: true })
+// SPA fallback that turns /cg/2 into cg's index.html. Absent before a build
+// (dev runs off Vite), so skip it then: sirv scans the folder at startup and
+// throws on a missing one, which would take the relay down.
+const built = (dir) => (existsSync(dir) ? sirv(dir, { single: true }) : (req, res, next) => next())
+const cg = built(`${ROOT}/app/cg`)
+const control = built(`${ROOT}/app/control`)
 
 // Rosters are read off disk per request, never hardcoded: adding a hero, a
 // logo or a font is a file drop, no code change and no restart. A readdir is
