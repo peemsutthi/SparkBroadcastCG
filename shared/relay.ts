@@ -16,6 +16,10 @@ export const ASSETS = `${API}/assets`
 export function useRelay(output = 1) {
   const [all, setAll] = useState<OnAir>({})
   const [live, setLive] = useState(false)
+  // Counts the relay's syncs. A sync is the one message that says "this is
+  // everything on air" rather than "this changed", so control re-reads its
+  // board off it — and must not mistake an echo of its own take for one.
+  const [syncs, setSyncs] = useState(0)
   const sock = useRef<WebSocket | null>(null)
 
   useEffect(() => {
@@ -28,6 +32,7 @@ export function useRelay(output = 1) {
       ws.onopen = () => setLive(true)
       ws.onmessage = (e) => {
         const msg = JSON.parse(e.data)
+        if (msg.type === 'sync') setSyncs((n) => n + 1)
         setAll((prev) => {
           if (msg.type === 'sync') return msg.onAir
           if (msg.type === 'take') return { ...prev, [slot(msg)]: msg }
@@ -66,6 +71,7 @@ export function useRelay(output = 1) {
   return {
     onAir,
     live,
+    syncs,
     send: (msg: Msg) => sock.current?.send(JSON.stringify(msg)),
   }
 }

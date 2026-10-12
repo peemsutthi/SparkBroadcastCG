@@ -218,15 +218,18 @@ Two rules that carry through every panel:
 - **Press it → raised. Type in it → recessed.** Buttons and selects get a top
   highlight; inputs get an inset shadow.
 
-## Known issue
+## Control adopts what is on air
 
-Reloading control resets its local draft state to step 0 while the relay still
-holds the live draft, so the tally rail reads ON AIR while the transport reads
-OFF AIR. Pressing *Show draft* in that state pushes control's empty board to
-air. Retargeting the output has the same shape: the tally follows the new
-output, while the board on screen is still the one the operator was driving.
-The fix is to adopt the target output's `draft` layer as control's state on
-connect and on retarget; not yet done.
+Control's draft is local state the operator types into, but what is on air is
+the relay's. The two are reconciled at two moments: on every `sync` (a reload
+of control, or the relay coming back) and on a change of target output,
+control takes the target output's `draft` layer as its own draft. If that
+output has nothing up, the local draft stands — that is how a board is copied
+to a fresh output. `useRelay` counts syncs (`syncs`) so control can tell a sync
+from an echo; adopting on every echo would overwrite a field mid-typing.
+
+The cost: anything not yet sent to air — a pick typed but not pushed with
+*Next phase* or *Sync* — is replaced at those two moments by what is on air.
 
 ## `legacy/`
 
