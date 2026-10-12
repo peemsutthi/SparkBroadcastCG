@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { existsSync, readdirSync } from 'node:fs'
+import { once } from 'node:events'
+import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // If a relay is already on this port, our own copy dies on bind and every
@@ -15,11 +18,30 @@ if (await fetch(`${BASE}/api/host`).then(() => true, () => false)) {
   process.exit(1)
 }
 
-const server = spawn('node', ['src/index.js'], {
-  stdio: 'inherit',
-  env: { ...process.env, PORT },
+// The relay saves what is on air after every take and clear. Its own temp
+// file, set here and never inherited: a check that wrote the real
+// show-state.json would put its test graphics on air at the next start.
+const STATE_DIR = mkdtempSync(join(tmpdir(), 'sparkcg-check-'))
+const STATE_FILE = join(STATE_DIR, 'show-state.json')
+
+const start = () =>
+  spawn('node', ['src/index.js'], {
+    stdio: 'inherit',
+    env: { ...process.env, PORT, STATE_FILE },
+  })
+
+// SIGKILL, not a polite stop: a crash or a closed console window gets no
+// chance to save on the way out either.
+const stop = async () => {
+  server.kill('SIGKILL')
+  await once(server, 'exit')
+}
+
+let server = start()
+process.on('exit', () => {
+  server.kill()
+  rmSync(STATE_DIR, { recursive: true, force: true })
 })
-process.on('exit', () => server.kill())
 
 const connect = () =>
   new Promise((resolve, reject) => {
@@ -84,6 +106,27 @@ await clearedOne
 
 const stillTwo = await connect()
 assert.deepEqual(Object.keys((await next(stillTwo)).onAir), ['2/draft'])
+
+// What is on air survives the relay going down: it comes back with the same
+// takes, so a browser source that reconnects gets its graphic back, not a
+// blank stage.
+const onThree = { type: 'take', output: 3, layer: 'draft', template: 'draft', data: { step: 4 } }
+const saved = next(cg)
+control.send(JSON.stringify(onThree))
+await saved
+
+await stop()
+server = start()
+const back = await connect()
+assert.deepEqual((await next(back)).onAir, { '2/draft': onTwo, '3/draft': onThree })
+
+// A state file that is not JSON — a hand edit, a disk fault — must cost the
+// show its graphics, never the relay.
+await stop()
+writeFileSync(STATE_FILE, '{ "2/draft": ')
+server = start()
+const fresh = await connect()
+assert.deepEqual((await next(fresh)).onAir, {})
 
 // The CG stylesheets are served the same way — an operator edits style/*.css
 // and reloads the browser source — and the same escape hatch must be shut.

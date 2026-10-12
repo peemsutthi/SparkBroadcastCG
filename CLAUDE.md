@@ -28,7 +28,9 @@ All tooling (TypeScript, ESLint, Vite, React) is declared once in the root
 `vite.config.ts`.
 
 `server/check.js` is a single plain-node script — there is no test runner and no
-way to run one test. It asserts the relay protocol end to end, then checks that
+way to run one test. It asserts the relay protocol end to end — including that
+`onAir` survives a killed and restarted relay, on a temp `STATE_FILE` of its
+own so a run never touches a real `show-state.json` — then checks that
 every hero in `/api/heroes` exists in all three art folders, and that
 `/api/host` returns a LAN address rather than `localhost`.
 
@@ -64,6 +66,11 @@ everything:
   the relay says is up — plus a layer it has just cleared, held on its last
   take while the template plays its out — so nothing may be rendered
   unconditionally there; anything unconditional goes to air.
+- `onAir` outlives the relay. Every `take` and `clear` rewrites
+  `show-state.json` in `ROOT` (temp file, then rename), and the relay loads it
+  on start, so a crash or a closed console window comes back with the same
+  graphics up. A missing or unreadable file logs one line and starts empty.
+  `STATE_FILE` overrides the path; the file is gitignored.
 
 Protocol (`shared/draft.ts` has the payload types):
 

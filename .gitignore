@@ -28,3 +28,6 @@ assets/samplehud/
 # built pages and the shipped folder (npm run build / npm run ship)
 app/
 release/
+
+# the relay's on-air state, and its temp file mid-write (server/src/index.js)
+show-state.json*
