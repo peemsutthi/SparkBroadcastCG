@@ -639,14 +639,12 @@ export default function App() {
     take(state)
   }
 
+  // A plain clear: cg plays the slide-out itself before it lets the board go,
+  // so nothing here has to outlive the press — closing this page mid-hide
+  // cannot strand a board half-out on air.
   const hide = () => {
-    // A bare clear unmounts the overlay instantly. Play the slide-out first,
-    // then take it down — control owns the timing, cg just plays the class.
-    take({ ...draft, hiding: true })
+    send({ type: 'clear', output, layer: 'draft' })
     setDraft((d) => ({ ...d, step: 0 }))
-    // `output` is the one this hide started on, captured by the closure —
-    // retargeting during the slide-out must not take down a different CG.
-    setTimeout(() => send({ type: 'clear', output, layer: 'draft' }), 800)
   }
 
   // Picks and bans only. Team names, players, scores and the global bans

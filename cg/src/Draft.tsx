@@ -1,3 +1,4 @@
+import { useEffect, useEffectEvent } from 'react'
 import type { SyntheticEvent } from 'react'
 import { DEFAULT_COLORS, DEFAULT_FONTS, DRAFT_SEQUENCE } from '../../shared/draft'
 import type { DraftState } from '../../shared/draft'
@@ -213,9 +214,34 @@ function GlobalStrip({
   )
 }
 
-export default function Draft({ data }: { data: Record<string, unknown> }) {
+// The out is awaited on its longest part, the centre's 0.8s slide-down. The
+// timer is for when animationend never comes: OBS throttles animations in a
+// hidden source, and a board that never reports done would never leave.
+const LEAVE_FALLBACK = 1500
+
+export default function Draft({
+  data,
+  leaving,
+  onLeft,
+}: {
+  data: Record<string, unknown>
+  leaving: boolean
+  onLeft: () => void
+}) {
   const s = data as unknown as DraftState
-  const { step, hiding, blue, red } = s
+  const { step, blue, red } = s
+  // `hiding` is the older way out — a take sent ahead of a delayed clear —
+  // and still plays, for any sender that has not moved to a plain clear.
+  const hiding = s.hiding || leaving
+
+  // An event, not a dependency: cg re-renders on every output's messages, and
+  // a timer that restarted on each would never fire while another is driven.
+  const left = useEffectEvent(onLeft)
+  useEffect(() => {
+    if (!leaving) return
+    const timer = setTimeout(() => left(), LEAVE_FALLBACK)
+    return () => clearTimeout(timer)
+  }, [leaving])
 
   const lit = new Set(DRAFT_SEQUENCE[step] ?? [])
 
@@ -240,7 +266,14 @@ export default function Draft({ data }: { data: Record<string, unknown> }) {
       {teamNameFont.face}
       {scoreFont.face}
       {matchInfoFont.face}
-      <div className={`draft-center${hiding ? ' slide-down-out' : ''}`}>
+      <div
+        className={`draft-center${hiding ? ' slide-down-out' : ''}`}
+        onAnimationEnd={(e) => {
+          // Its own slide-down only: an animation style/draft.css gives
+          // anything inside the centre would bubble up here too.
+          if (leaving && e.target === e.currentTarget) onLeft()
+        }}
+      >
         <img
           className="draft-bg"
           src={`${ASSETS}/overlayhud/hud.png`}

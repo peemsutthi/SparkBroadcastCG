@@ -61,8 +61,9 @@ everything:
   state that must survive belongs in the message, not in a component.
 - `onAir` is keyed by **output and layer** (`"2/draft"`). A `take` replaces that
   layer on that output; a `clear` removes it. `cg/src/App.tsx` renders only what
-  the relay says is up, so nothing may be rendered unconditionally there —
-  anything unconditional goes to air.
+  the relay says is up — plus a layer it has just cleared, held on its last
+  take while the template plays its out — so nothing may be rendered
+  unconditionally there; anything unconditional goes to air.
 
 Protocol (`shared/draft.ts` has the payload types):
 
@@ -117,6 +118,12 @@ air.
 
 Add an entry to the `templates` map in `cg/src/App.tsx`. The key is the string
 control sends as `template`. Current: `draft`.
+
+A template owns its own out. After a `clear` it stays mounted with
+`leaving: true`, and is unmounted only when it calls `onLeft` — on its out
+animation's `animationend`, with a timer behind it, since a hidden OBS source
+can throttle animations and the event may never come (see `Draft.tsx`). A
+template that never calls `onLeft` never leaves air.
 
 ### Assets
 
