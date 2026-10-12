@@ -1,5 +1,5 @@
 import { exec } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { readdir } from 'node:fs/promises'
 import { createServer } from 'node:http'
 import { networkInterfaces } from 'node:os'
@@ -104,12 +104,49 @@ const server = createServer(async (req, res) => {
 
 const wss = new WebSocketServer({ server })
 
+// What is on air outlives this process: a crash, or the console window closed
+// by mistake, must not take every graphic down with it. In ROOT, so the exe
+// finds it again on the next double-click. STATE_FILE moves it — the check
+// points it at a temp file, so a test run never touches a real show.
+const STATE_FILE = process.env.STATE_FILE || `${ROOT}/show-state.json`
+
+const restore = () => {
+  try {
+    const state = JSON.parse(readFileSync(STATE_FILE, 'utf8'))
+    // Valid JSON that is not an object (a hand edit) would throw on the
+    // first take instead of here.
+    if (!state || typeof state !== 'object' || Array.isArray(state)) throw new Error('not an object')
+    console.log(`restored ${Object.keys(state).length} graphic(s) from ${STATE_FILE}`)
+    return state
+  } catch (err) {
+    // Missing on a first run, unreadable after a bad edit: either way the
+    // relay starts empty rather than not at all.
+    console.log(`no show state in ${STATE_FILE} (${err.code ?? err.message}), starting empty`)
+    return {}
+  }
+}
+
+// Written whole to a temp file, then renamed over the real one: a rename
+// either happens or it does not, so a crash mid-write leaves the last good
+// state, never half of one. flush puts the bytes on disk before the rename,
+// or a power cut could leave the new name pointing at nothing.
+const save = () => {
+  try {
+    writeFileSync(`${STATE_FILE}.tmp`, JSON.stringify(onAir), { flush: true })
+    renameSync(`${STATE_FILE}.tmp`, STATE_FILE)
+  } catch (err) {
+    // A read-only folder must not take the relay down mid-show: the graphic
+    // still goes to air, it just will not survive a restart.
+    console.log(`could not save show state: ${err.message}`)
+  }
+}
+
 // "output/layer" -> what's currently on it. Replayed to every new client,
 // because OBS reloads the browser source on scene change and it comes back
 // blank. Keyed by output as well as layer so /cg/1 and /cg/2 hold different
 // graphics; a message with no output belongs to output 1, which is what an
 // older client (or a browser source still on the pre-multi-output URL) sends.
-const onAir = {}
+const onAir = restore()
 
 const slot = (msg) => `${msg.output ?? 1}/${msg.layer}`
 
@@ -128,6 +165,8 @@ wss.on('connection', (sock) => {
 
     if (msg.type === 'take') onAir[slot(msg)] = msg
     else if (msg.type === 'clear') delete onAir[slot(msg)]
+    // Before the broadcast: anything a client sees on air is already on disk.
+    if (msg.type === 'take' || msg.type === 'clear') save()
 
     // Echo to the sender too: the relay is the single source of truth for
     // what's on air, so control renders what comes back, not what it sent.

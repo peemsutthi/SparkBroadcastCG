@@ -28,7 +28,9 @@ All tooling (TypeScript, ESLint, Vite, React) is declared once in the root
 `vite.config.ts`.
 
 `server/check.js` is a single plain-node script — there is no test runner and no
-way to run one test. It asserts the relay protocol end to end, then checks that
+way to run one test. It asserts the relay protocol end to end — including that
+`onAir` survives a killed and restarted relay, on a temp `STATE_FILE` of its
+own so a run never touches a real `show-state.json` — then checks that
 every hero in `/api/heroes` exists in all three art folders, and that
 `/api/host` returns a LAN address rather than `localhost`.
 
@@ -61,8 +63,14 @@ everything:
   state that must survive belongs in the message, not in a component.
 - `onAir` is keyed by **output and layer** (`"2/draft"`). A `take` replaces that
   layer on that output; a `clear` removes it. `cg/src/App.tsx` renders only what
-  the relay says is up, so nothing may be rendered unconditionally there —
-  anything unconditional goes to air.
+  the relay says is up — plus a layer it has just cleared, held on its last
+  take while the template plays its out — so nothing may be rendered
+  unconditionally there; anything unconditional goes to air.
+- `onAir` outlives the relay. Every `take` and `clear` rewrites
+  `show-state.json` in `ROOT` (temp file, then rename), and the relay loads it
+  on start, so a crash or a closed console window comes back with the same
+  graphics up. A missing or unreadable file logs one line and starts empty.
+  `STATE_FILE` overrides the path; the file is gitignored.
 
 Protocol (`shared/draft.ts` has the payload types):
 
@@ -117,6 +125,12 @@ air.
 
 Add an entry to the `templates` map in `cg/src/App.tsx`. The key is the string
 control sends as `template`. Current: `draft`.
+
+A template owns its own out. After a `clear` it stays mounted with
+`leaving: true`, and is unmounted only when it calls `onLeft` — on its out
+animation's `animationend`, with a timer behind it, since a hidden OBS source
+can throttle animations and the event may never come (see `Draft.tsx`). A
+template that never calls `onLeft` never leaves air.
 
 ### Assets
 
@@ -218,15 +232,18 @@ Two rules that carry through every panel:
 - **Press it → raised. Type in it → recessed.** Buttons and selects get a top
   highlight; inputs get an inset shadow.
 
-## Known issue
+## Control adopts what is on air
 
-Reloading control resets its local draft state to step 0 while the relay still
-holds the live draft, so the tally rail reads ON AIR while the transport reads
-OFF AIR. Pressing *Show draft* in that state pushes control's empty board to
-air. Retargeting the output has the same shape: the tally follows the new
-output, while the board on screen is still the one the operator was driving.
-The fix is to adopt the target output's `draft` layer as control's state on
-connect and on retarget; not yet done.
+Control's draft is local state the operator types into, but what is on air is
+the relay's. The two are reconciled at two moments: on every `sync` (a reload
+of control, or the relay coming back) and on a change of target output,
+control takes the target output's `draft` layer as its own draft. If that
+output has nothing up, the local draft stands — that is how a board is copied
+to a fresh output. `useRelay` counts syncs (`syncs`) so control can tell a sync
+from an echo; adopting on every echo would overwrite a field mid-typing.
+
+The cost: anything not yet sent to air — a pick typed but not pushed with
+*Next phase* or *Sync* — is replaced at those two moments by what is on air.
 
 ## `legacy/`
 

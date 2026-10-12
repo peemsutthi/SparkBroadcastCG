@@ -591,7 +591,7 @@ export default function App() {
   // state per output, so switching the target leaves the others on air
   // untouched — and the tally below reads the new target, not the old one.
   const [output, setOutput] = useState(1)
-  const { live, onAir, send } = useRelay(output)
+  const { live, onAir, syncs, send } = useRelay(output)
   const heroes = useList('/api/heroes')
   const logos = useList('/api/teamlogos')
   const fontFiles = useList('/api/fonts')
@@ -610,6 +610,21 @@ export default function App() {
   // than tracking a second copy here.
   const draftUp = Boolean(onAir['draft'])
 
+  // A reload, or a new target, leaves this page's draft describing a board
+  // that is not the one on air — and Show draft would push it there. So the
+  // board on air becomes the draft here on every sync and every retarget.
+  // Only then: adopting each echo would overwrite a pick mid-typing. With
+  // nothing up on the target, the local draft stands.
+  const [adopted, setAdopted] = useState('')
+  const moment = `${syncs}/${output}`
+  if (syncs > 0 && moment !== adopted) {
+    setAdopted(moment)
+    const up = onAir['draft']?.data as DraftState | undefined
+    // `hiding` is a board on its way out (an older control's hide); carried
+    // over, every take after it would play the slide-out.
+    if (up) setDraft((d) => ({ ...d, ...up, hiding: undefined }))
+  }
+
   const take = (state: DraftState) =>
     send({ type: 'take', output, layer: 'draft', template: 'draft', data: state })
 
@@ -624,14 +639,12 @@ export default function App() {
     take(state)
   }
 
+  // A plain clear: cg plays the slide-out itself before it lets the board go,
+  // so nothing here has to outlive the press — closing this page mid-hide
+  // cannot strand a board half-out on air.
   const hide = () => {
-    // A bare clear unmounts the overlay instantly. Play the slide-out first,
-    // then take it down — control owns the timing, cg just plays the class.
-    take({ ...draft, hiding: true })
+    send({ type: 'clear', output, layer: 'draft' })
     setDraft((d) => ({ ...d, step: 0 }))
-    // `output` is the one this hide started on, captured by the closure —
-    // retargeting during the slide-out must not take down a different CG.
-    setTimeout(() => send({ type: 'clear', output, layer: 'draft' }), 800)
   }
 
   // Picks and bans only. Team names, players, scores and the global bans
