@@ -173,7 +173,10 @@ moment it is pasted into OBS on another machine. One URL per output:
 ## Shipping (Windows)
 
 `npm run ship` → `release/SparkCG/`, the folder handed to the operator:
-`SparkCG.exe` + `style/` + `assets/` + `app/`. No Node on the show machine.
+`SparkCG.exe` + `style/` + `assets/` + `app/` + `README.txt`. No Node on the
+show machine. `README.txt` is `scripts/operator-README.txt`, the operator's
+how-to; keep it in step with what the exe does. `assets/teamlogo/` and
+`assets/fonts/` are created empty so the operator can see where to drop.
 
 - **Built, the relay serves everything on :4000**: control at `/`, cg at
   `/cg/N` (sirv `single: true`), plus `/assets`, `/style`, `/api/*`. `npm run
@@ -188,7 +191,13 @@ moment it is pasted into OBS on another machine. One URL per output:
 - In the exe, `ROOT` is the exe's own folder (`sea.isSea()` in
   `server/src/index.js`) — that is what keeps `style/` and `assets/` editable
   after shipping. It also opens the browser on start, and a second
-  double-click just opens the browser. The console window is the off switch.
+  double-click just opens the browser. The console window is the operator's
+  "running" sign and the off switch: shipped, it sets its title bar to
+  *SparkCG — RUNNING · close this window to stop* and prints a plain-English
+  banner instead of the dev log lines.
+- Pushing a `v*` tag runs `.github/workflows/release.yml`: lint, test,
+  `npm run ship` on Ubuntu, then `SparkCG-windows.zip` (the name README's
+  download link promises) goes up as a GitHub Release of that tag.
 - macOS is not built yet: darwin node binary, `--macho-segment-name
   NODE_SEA`, `codesign --sign -`, and `open` in place of `start`.
 

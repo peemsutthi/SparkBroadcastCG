@@ -1,0 +1,29 @@
+# Push a tag like v1.0.0 → builds release/SparkCG/ and attaches it as
+# SparkCG-windows.zip to a GitHub Release of that tag: the download README.md points to.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # create the release and upload the zip
+
+jobs:
+  ship:
+    runs-on: ubuntu-latest # ship.mjs builds the Windows exe from any OS
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run ship # typechecks and builds the pages too
+      # zip -r keeps the empty assets/teamlogo and assets/fonts folders.
+      - run: cd release && zip -qr ../SparkCG-windows.zip SparkCG
+      - run: gh release create "$GITHUB_REF_NAME" SparkCG-windows.zip --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

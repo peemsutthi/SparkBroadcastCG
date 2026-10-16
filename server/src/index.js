@@ -116,12 +116,12 @@ const restore = () => {
     // Valid JSON that is not an object (a hand edit) would throw on the
     // first take instead of here.
     if (!state || typeof state !== 'object' || Array.isArray(state)) throw new Error('not an object')
-    console.log(`restored ${Object.keys(state).length} graphic(s) from ${STATE_FILE}`)
+    console.log(`restored ${Object.keys(state).length} graphic(s) from last time (${STATE_FILE})`)
     return state
   } catch (err) {
     // Missing on a first run, unreadable after a bad edit: either way the
     // relay starts empty rather than not at all.
-    console.log(`no show state in ${STATE_FILE} (${err.code ?? err.message}), starting empty`)
+    console.log(`nothing on air from last time, starting empty (${STATE_FILE}: ${err.code ?? err.message})`)
     return {}
   }
 }
@@ -192,11 +192,23 @@ wss.on('error', (err) => {
 })
 
 server.listen(PORT, () => {
-  console.log(`sparkcg relay on ws://localhost:${PORT}`)
-  console.log(`control on http://localhost:${PORT}/`)
-  console.log(`cg on http://${lanAddress()}:${PORT}/cg/1 .. /cg/4`)
-  if (SHIPPED) {
-    console.log('close this window to stop the relay')
-    openControl()
+  if (!SHIPPED) {
+    console.log(`sparkcg relay on ws://localhost:${PORT}`)
+    console.log(`control on http://localhost:${PORT}/`)
+    console.log(`cg on http://${lanAddress()}:${PORT}/cg/1 .. /cg/4`)
+    return
   }
+  // The console window is the operator's "it is running" sign and its off switch,
+  // so it speaks to them, not to us. On Windows the title is the window's title bar.
+  process.title = 'SparkCG — RUNNING · close this window to stop'
+  console.log(`
+  SparkCG is running.
+
+  Control:  http://localhost:${PORT}/
+  OBS:      http://${lanAddress()}:${PORT}/cg/1 .. /cg/4
+
+  To stop: close this window.
+  What is on air comes back when you start it again.
+`)
+  openControl()
 })

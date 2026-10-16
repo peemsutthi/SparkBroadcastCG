@@ -61,9 +61,17 @@ npm run build       # typecheck, then build both pages into app/
 npm run ship
 ```
 
-This builds `release/SparkCG/` — `SparkCG.exe` plus `style/`, `assets/` and
-`app/`. Zip it and attach it to a GitHub Release, or copy it straight to the
-Windows PC. It needs nothing installed. It builds from macOS or Windows.
+This builds `release/SparkCG/` — `SparkCG.exe` plus `style/`, `assets/`,
+`app/` and `README.txt`, the operator's copy of the steps below. It needs
+nothing installed on the Windows PC, and it builds from macOS or Windows.
+Copy it straight across, or publish it:
+
+```sh
+git tag v1.0.0 && git push origin v1.0.0
+```
+
+A pushed `v*` tag runs `.github/workflows/release.yml`, which lints, tests,
+ships and attaches `SparkCG-windows.zip` to a GitHub Release of that tag.
 
 ### Running the shipped app
 
@@ -74,8 +82,9 @@ Windows PC. It needs nothing installed. It builds from macOS or Windows.
   (`http://<this-pc>:4000/cg/1` … `/cg/4`).
 - Edit `style/*.css` and reload the browser source to restyle live.
 - Drop hero PNGs into `assets/ban`, `assets/globalban`, `assets/heropick`
-  (same filename in all three) — no restart.
-- Close the console window to stop.
+  (same filename in all three), logos into `assets/teamlogo`, fonts into
+  `assets/fonts` — no restart.
+- The console window says *SparkCG is running*; close it to stop.
 
 ## Protocol
 

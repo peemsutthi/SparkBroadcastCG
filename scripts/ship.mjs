@@ -56,6 +56,9 @@ run(
 )
 
 for (const dir of ['style', 'assets', 'app']) cpSync(dir, `${OUT}/${dir}`, { recursive: true })
+// Empty until the operator drops files in, but there so they can see where.
+for (const dir of ['teamlogo', 'fonts']) mkdirSync(`${OUT}/assets/${dir}`, { recursive: true })
+cpSync('scripts/operator-README.txt', `${OUT}/README.txt`)
 rmSync('release/sea-prep.blob')
 rmSync('release/sea-config.json')
 console.log(`shipped → ${OUT}`)
