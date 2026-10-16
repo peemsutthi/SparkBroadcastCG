@@ -557,15 +557,13 @@ function Transport({
             </button>
           </div>
 
-          <div className="transport-swap">
-            <button className="btn btn-swap" onClick={onSwapSides}>
-              Swap sides
-            </button>
-          </div>
-
-          <div className="transport-clear">
+          {/* Clear can't be undone, so it takes two presses; Swap undoes itself, so one. */}
+          <div className="transport-panic" role="group" aria-labelledby="panic">
+            <span className="legend" id="panic">
+              PANIC
+            </span>
             <button
-              className={armed ? 'btn btn-clear armed' : 'btn btn-clear'}
+              className={armed ? 'btn btn-panic armed' : 'btn btn-panic'}
               onClick={() => {
                 if (armed) {
                   onClear()
@@ -577,6 +575,9 @@ function Transport({
               }}
             >
               {armed ? 'Press again to clear' : 'Clear picks & bans'}
+            </button>
+            <button className="btn btn-panic" onClick={onSwapSides}>
+              Swap sides
             </button>
           </div>
         </div>

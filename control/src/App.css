@@ -130,7 +130,8 @@
 
 /* The panel's name, so you can find the module you want at a glance.
    h2 brings its own margin, which would grow with the font size. */
-.panel-head .legend {
+.panel-head .legend,
+.transport-panic .legend {
   margin: 0;
   font-size: 24px;
 }
@@ -546,26 +547,19 @@
   background: var(--warning);
 }
 
-.transport-swap {
-  margin-top: 0.4rem;
-}
-
-.btn-swap {
-  width: 100%;
-  height: 52px;
-  font-size: 14px;
-}
-
-/* Destructive, so it sits apart from the routine keys rather than in the row
-   with them. The rule belongs to the divider, not to the button — on the
+/* Emergency keys, so they sit apart from the routine ones rather than in the
+   row with them. The rule belongs to the divider, not to a button — on the
    button it threw the label off centre inside its own box. */
-.transport-clear {
+.transport-panic {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
   margin-top: 0.5rem;
   padding-top: 1rem;
   border-top: 1px solid var(--seam);
 }
 
-.btn-clear {
+.btn-panic {
   width: 100%;
   height: 60px;
   background: var(--key);
@@ -574,12 +568,12 @@
   font-size: 16px;
 }
 
-.btn-clear:hover {
+.btn-panic:hover {
   background: var(--key-lit);
   color: var(--readout);
 }
 
-.btn-clear.armed {
+.btn-panic.armed {
   background: var(--warning);
   border-color: var(--warning);
   color: var(--void);
