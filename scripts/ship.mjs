@@ -49,8 +49,9 @@ const res = await fetch(url)
 if (!res.ok) throw new Error(`${url}: ${res.status}`)
 writeFileSync(EXE, Buffer.from(await res.arrayBuffer()))
 
+// The pinned devDependency, never a fresh download: it writes the exe the show PC runs.
 run(
-  `npx --yes postject ${EXE} NODE_SEA_BLOB release/sea-prep.blob ` +
+  `npx postject ${EXE} NODE_SEA_BLOB release/sea-prep.blob ` +
     '--sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2',
 )
 

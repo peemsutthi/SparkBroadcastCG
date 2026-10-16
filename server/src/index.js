@@ -162,11 +162,14 @@ wss.on('connection', (sock) => {
     } catch {
       return // a malformed message must not take the relay down mid-show
     }
+    // Nor valid JSON that is not a take or clear (`null` throws on .type), and
+    // it is not forwarded either: every page would read it as a clear.
+    if (msg?.type !== 'take' && msg?.type !== 'clear') return
 
     if (msg.type === 'take') onAir[slot(msg)] = msg
-    else if (msg.type === 'clear') delete onAir[slot(msg)]
+    else delete onAir[slot(msg)]
     // Before the broadcast: anything a client sees on air is already on disk.
-    if (msg.type === 'take' || msg.type === 'clear') save()
+    save()
 
     // Echo to the sender too: the relay is the single source of truth for
     // what's on air, so control renders what comes back, not what it sent.
@@ -181,7 +184,8 @@ wss.on('connection', (sock) => {
 const openControl = () => exec(`start "" http://localhost:${PORT}`)
 
 // Double-clicked twice: the relay is already up, so show it instead of dying.
-server.on('error', (err) => {
+// On wss, not server: ws re-emits the server's errors there first, unheard = crash.
+wss.on('error', (err) => {
   if (!SHIPPED || err.code !== 'EADDRINUSE') throw err
   openControl()
   setTimeout(() => process.exit(0), 1000)

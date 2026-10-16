@@ -5,9 +5,12 @@ import type { DraftState } from '../../shared/draft'
 import { ASSETS } from '../../shared/relay'
 
 // Art is a file drop, so a hero with no image must go quiet rather than
-// showing a broken icon on air.
+// showing a broken icon on air — until a file loads: React reuses an <img>
+// and swaps only its src, so a typo fixed on air would otherwise stay hidden.
 const hide = (e: SyntheticEvent<HTMLImageElement>) => {
-  e.currentTarget.style.display = 'none'
+  const img = e.currentTarget
+  img.style.display = 'none'
+  img.addEventListener('load', () => (img.style.display = ''), { once: true })
 }
 
 const FONT_FORMATS: Record<string, string> = {
@@ -230,9 +233,6 @@ export default function Draft({
 }) {
   const s = data as unknown as DraftState
   const { step, blue, red } = s
-  // `hiding` is the older way out — a take sent ahead of a delayed clear —
-  // and still plays, for any sender that has not moved to a plain clear.
-  const hiding = s.hiding || leaving
 
   // An event, not a dependency: cg re-renders on every output's messages, and
   // a timer that restarted on each would never fire while another is driven.
@@ -267,7 +267,7 @@ export default function Draft({
       {scoreFont.face}
       {matchInfoFont.face}
       <div
-        className={`draft-center${hiding ? ' slide-down-out' : ''}`}
+        className={`draft-center${leaving ? ' slide-down-out' : ''}`}
         onAnimationEnd={(e) => {
           // Its own slide-down only: an animation style/draft.css gives
           // anything inside the centre would bubble up here too.
@@ -312,7 +312,7 @@ export default function Draft({
         const out = side === 'blue' ? 'slide-left-out' : 'slide-right-out'
 
         return (
-          <div className={`draft-${side}${hiding ? ' ' + out : ''}`} key={side}>
+          <div className={`draft-${side}${leaving ? ' ' + out : ''}`} key={side}>
             <GlobalStrip side={side} games={games} used={team.used} />
             <div
               className={`draft-team-name ${side}`}

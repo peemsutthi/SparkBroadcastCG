@@ -51,6 +51,7 @@ export type Take = {
   layer: string
   template: string
   data: Record<string, unknown>
+  from?: string // the control tab that sent it: other tabs adopt it, its own does not
 }
 export type Clear = { type: 'clear'; output?: number; layer: string }
 export type Msg = Take | Clear
@@ -101,7 +102,6 @@ export const DEFAULT_FONTS: DraftFonts = {
 
 export type DraftState = {
   step: number
-  hiding?: boolean
   matchName: string
   gameNum: string
   // Optional: a take sent before this field existed still has to render, and

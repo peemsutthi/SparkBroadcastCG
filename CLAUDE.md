@@ -80,7 +80,8 @@ Protocol (`shared/draft.ts` has the payload types):
 ```
 
 A message with no `output` is output 1, so a browser source left on the old URL
-keeps working.
+keeps working. Anything that is not a take or a clear is dropped, not
+forwarded: every page reads an unknown message as a clear.
 
 ### Outputs
 
@@ -235,15 +236,20 @@ Two rules that carry through every panel:
 ## Control adopts what is on air
 
 Control's draft is local state the operator types into, but what is on air is
-the relay's. The two are reconciled at two moments: on every `sync` (a reload
-of control, or the relay coming back) and on a change of target output,
-control takes the target output's `draft` layer as its own draft. If that
-output has nothing up, the local draft stands — that is how a board is copied
-to a fresh output. `useRelay` counts syncs (`syncs`) so control can tell a sync
-from an echo; adopting on every echo would overwrite a field mid-typing.
+the relay's. The two are reconciled at three moments: on every `sync` (a reload
+of control, or the relay coming back), on a change of target output, and on a
+take from another control tab, control takes the target output's `draft` layer
+as its own draft. If that output has nothing up, the local draft stands — that
+is how a board is copied to a fresh output. `useRelay` counts syncs (`syncs`)
+so control can tell a sync from an echo, and every take carries `from`, the
+sending tab's id, so a tab adopts another tab's take but never its own echo —
+adopting that would overwrite a field mid-typing. The exe opens a new tab on
+every start, so after a restart there are two, and a stale one must not push
+its old board over the live one. A clear carries no `from`, so another tab's
+*Hide* leaves this tab's step where it was.
 
 The cost: anything not yet sent to air — a pick typed but not pushed with
-*Next phase* or *Sync* — is replaced at those two moments by what is on air.
+*Next phase* or *Sync* — is replaced at those moments by what is on air.
 
 ## `legacy/`
 

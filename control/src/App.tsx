@@ -11,13 +11,16 @@ import {
   emptyTeam,
   phaseLabel,
 } from '../../shared/draft'
-import type { DraftColors, DraftFonts, DraftState, Team } from '../../shared/draft'
+import type { DraftColors, DraftFonts, DraftState, Take, Team } from '../../shared/draft'
 import './App.css'
 
 const TABS = ['Draft / Ban', 'Setup'] as const
 type Tab = (typeof TABS)[number]
 
 const GAMES = [1, 2, 3, 4, 5, 6, 7]
+
+// Tells another tab's takes from this tab's echoes. Not randomUUID: https-only.
+const TAB = Math.random().toString(36).slice(2)
 
 /** Colours and fonts are a show setting, not part of a draft — set once, they
  *  should outlive the reload that puts the board back to step 0. Spread over
@@ -392,16 +395,14 @@ function StyleField({
  *  per side: the hud art carries team identity, the text does not. */
 function ColorPanel({
   colors,
-  onColorsChange,
   fonts,
   fontFiles,
-  onFontsChange,
+  onChange,
 }: {
   colors: DraftColors
-  onColorsChange: (c: DraftColors) => void
   fonts: DraftFonts
   fontFiles: string[]
-  onFontsChange: (f: DraftFonts) => void
+  onChange: (style: Pick<DraftState, 'colors' | 'fonts'>) => void
 }) {
   return (
     <Panel legend="Text Styling">
@@ -410,21 +411,19 @@ function ColorPanel({
           key={key}
           label={label}
           color={colors[key]}
-          onColorChange={(v) => onColorsChange({ ...colors, [key]: v })}
+          onColorChange={(v) => onChange({ colors: { ...colors, [key]: v } })}
           font={fonts[key]}
           fontFiles={fontFiles}
-          onFontChange={(v) => onFontsChange({ ...fonts, [key]: v })}
+          onFontChange={(v) => onChange({ fonts: { ...fonts, [key]: v } })}
         />
       ))}
 
       <div className="field">
         <span className="legend">Reset</span>
+        {/* One change for both: two in one click each start from the pre-click board. */}
         <button
           className="btn"
-          onClick={() => {
-            onColorsChange(DEFAULT_COLORS)
-            onFontsChange(DEFAULT_FONTS) // the panel owns both, so reset both
-          }}
+          onClick={() => onChange({ colors: DEFAULT_COLORS, fonts: DEFAULT_FONTS })}
         >
           Defaults
         </button>
@@ -546,7 +545,8 @@ function Transport({
             {primary}
           </button>
           <div className="transport-keys">
-            <button className="btn" disabled={step === 0} onClick={() => onStep(step - 1)}>
+            {/* Stops at step 1: step 0 reads OFF AIR, so only Hide may land there. */}
+            <button className="btn" disabled={step <= 1} onClick={() => onStep(step - 1)}>
               Back
             </button>
             <button className="btn btn-sync" disabled={!onAir} onClick={onSync}>
@@ -610,23 +610,25 @@ export default function App() {
   // than tracking a second copy here.
   const draftUp = Boolean(onAir['draft'])
 
-  // A reload, or a new target, leaves this page's draft describing a board
-  // that is not the one on air — and Show draft would push it there. So the
-  // board on air becomes the draft here on every sync and every retarget.
-  // Only then: adopting each echo would overwrite a pick mid-typing. With
-  // nothing up on the target, the local draft stands.
-  const [adopted, setAdopted] = useState('')
+  // A reload, a new target, or another control tab's take leaves this page's
+  // draft describing a board that is not the one on air — and Show draft
+  // would push it there. So the board on air becomes the draft here at each
+  // of those. Never on this tab's own echo: it would overwrite a pick
+  // mid-typing. With nothing up on the target, the local draft stands.
+  // shortcut: another tab's Hide is not adopted (a clear names no sender), so
+  // this tab keeps its step; tag clears with `from` too if two tabs drive one output.
+  const up: Take | undefined = onAir['draft']
   const moment = `${syncs}/${output}`
-  if (syncs > 0 && moment !== adopted) {
+  const [adopted, setAdopted] = useState('')
+  const [seen, setSeen] = useState<Take>()
+  if ((syncs > 0 && moment !== adopted) || (up && up.from !== TAB && up !== seen)) {
     setAdopted(moment)
-    const up = onAir['draft']?.data as DraftState | undefined
-    // `hiding` is a board on its way out (an older control's hide); carried
-    // over, every take after it would play the slide-out.
-    if (up) setDraft((d) => ({ ...d, ...up, hiding: undefined }))
+    setSeen(up)
+    if (up) setDraft((d) => ({ ...d, ...(up.data as DraftState) }))
   }
 
   const take = (state: DraftState) =>
-    send({ type: 'take', output, layer: 'draft', template: 'draft', data: state })
+    send({ type: 'take', output, layer: 'draft', template: 'draft', data: state, from: TAB })
 
   const patch = (p: Partial<DraftState>) => setDraft((d) => ({ ...d, ...p }))
 
@@ -669,17 +671,21 @@ export default function App() {
   // Restyling is a live correction as often as a pre-show setting, so it
   // reaches air the moment it changes rather than waiting on Sync — and is
   // saved so it outlives a reload of this page.
-  const setStyle = (field: 'colors' | 'fonts', value: DraftColors | DraftFonts) => {
-    const next = { ...draft, [field]: value }
+  const setStyle = (style: Pick<DraftState, 'colors' | 'fonts'>) => {
+    const next = { ...draft, ...style }
     setDraft(next)
     try {
-      localStorage.setItem(`sparkcg.${field}`, JSON.stringify(value))
+      for (const [field, value] of Object.entries(style)) {
+        localStorage.setItem(`sparkcg.${field}`, JSON.stringify(value))
+      }
     } catch {
       // No storage: it still goes to air, it just does not survive a reload.
     }
     if (draftUp) take(next)
   }
 
+  // Panic swap: the teams went in on the wrong sides. Everything each one owns
+  // moves across in one press, and straight to air: a mistake on air can't wait.
   const swapSides = () => {
     const next = { ...draft, blue: draft.red, red: draft.blue }
     setDraft(next)
@@ -745,10 +751,9 @@ export default function App() {
             <OutputPanel />
             <ColorPanel
               colors={draft.colors ?? DEFAULT_COLORS}
-              onColorsChange={(c) => setStyle('colors', c)}
               fonts={draft.fonts ?? DEFAULT_FONTS}
               fontFiles={fontFiles}
-              onFontsChange={(f) => setStyle('fonts', f)}
+              onChange={setStyle}
             />
           </>
         )}

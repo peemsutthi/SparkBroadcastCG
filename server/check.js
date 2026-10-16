@@ -79,9 +79,11 @@ assert.deepEqual(await relayed, take)
 const old = await connect()
 assert.deepEqual(Object.keys((await next(old)).onAir), ['1/lower-third'])
 
-// garbage must not kill the relay
+// garbage must neither kill the relay nor reach a page, which reads it as a clear
 const stillAlive = next(cg)
 control.send('not json')
+control.send('null')
+control.send(JSON.stringify({ type: 'hello', layer: 'lower-third' }))
 control.send(JSON.stringify({ type: 'clear', layer: 'lower-third' }))
 assert.equal((await stillAlive).type, 'clear')
 
@@ -133,7 +135,8 @@ assert.deepEqual((await next(fresh)).onAir, {})
 const css = await fetch(`${BASE}/style/draft.css`)
 assert.equal(css.status, 200)
 assert.equal(css.headers.get('content-type'), 'text/css')
-assert.notEqual((await fetch(`${BASE}/style/../package.json`)).status, 200)
+// %2f, not /: fetch resolves a plain .. away and would ask for /package.json.
+assert.notEqual((await fetch(`${BASE}/style/..%2fpackage.json`)).status, 200)
 
 // Built, the relay serves the pages too: the shipped folder is one port. /cg/2
 // must fall back to cg's index (not control's), or OBS shows the operator UI.
@@ -155,7 +158,7 @@ assert.equal(png.status, 200)
 assert.equal(png.headers.get('content-type'), 'image/png')
 assert.equal(png.headers.get('access-control-allow-origin'), '*')
 
-const escape = await fetch(`${BASE}/assets/../package.json`)
+const escape = await fetch(`${BASE}/assets/..%2fpackage.json`)
 assert.notEqual(escape.status, 200)
 
 // Every hero must exist in every variant folder. A hero present in heropick but
@@ -177,7 +180,7 @@ for (const variant of ['ban', 'globalban', 'heropick']) {
 // Control builds the copyable browser-source URL off this. localhost here
 // means every URL an operator pastes into OBS points at the wrong machine.
 const { host } = await (await fetch(`${BASE}/api/host`)).json()
-assert.match(host, /^\d+\.\d+\.\d+\.\d+$|^localhost$/, `bad host: ${host}`)
+assert.match(host, /^\d+\.\d+\.\d+\.\d+$/, `bad host: ${host}`)
 
 console.log(`ok — ${roster.length} heroes across 3 variants, host ${host}`)
 process.exit(0)
