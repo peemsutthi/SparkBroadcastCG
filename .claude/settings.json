@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm test)",
+      "Bash(PORT=4100 npm test)",
+      "Bash(npm run typecheck)",
+      "Bash(npm run lint)",
+      "Bash(npm run build)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "Bash(git show *)"
+    ],
+    "ask": [
+      "Bash(git commit *)",
+      "Bash(npm install *)",
+      "Bash(npm i *)",
+      "Bash(npx *)",
+      "Bash(npm run ship *)"
+    ],
+    "deny": [
+      "Bash(git push *)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean *)",
+      "Bash(npm publish *)",
+      "Edit(**/show-state.json*)",
+      "Edit(**/legacy/**)",
+      "Edit(**/node_modules/**)",
+      "Edit(**/package-lock.json)",
+      "Edit(**/app/**)",
+      "Edit(**/release/**)"
+    ]
+  }
+}
