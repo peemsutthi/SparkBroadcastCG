@@ -72,10 +72,10 @@ purpose**: a copy would drift and light a different slot than the button names.
 ### Adding a template
 
 Add an entry to `templates` in `cg/src/App.tsx`; the key is the `template` control sends (now
-`draft`). A template owns its own out: after a `clear` it stays mounted with `leaving: true` and is
-unmounted only when it calls `onLeft` — on its out's `animationend`, with a timer behind it, since
-a hidden OBS source can throttle animations and the event may never come (see `Draft.tsx`). A
-template that never calls `onLeft` never leaves air.
+`draft`). A template owns its own out: after a `clear` it stays mounted with `leaving: true` and
+calls `onLeft` on its out's `animationend`. cg's `App.tsx` also drops each leaving layer after a
+1.5 s fallback timer, since a hidden OBS source can throttle animations and the event may never
+come; a take for that layer during the out cancels the timer. The fallback must outlast every out.
 
 ### Assets, style, cross-machine
 
