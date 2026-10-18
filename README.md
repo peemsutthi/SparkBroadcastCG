@@ -74,8 +74,10 @@ Copy it straight across, or publish it:
 git tag v1.0.0 && git push origin v1.0.0
 ```
 
-A pushed `v*` tag runs `.github/workflows/release.yml`, which lints, tests,
-ships and attaches `SparkCG-windows.zip` to a GitHub Release of that tag.
+A pushed `v*` tag runs `.github/workflows/release.yml`, which lints,
+typechecks, tests, ships and attaches `SparkCG-windows.zip` to a GitHub Release
+of that tag. Every push and pull request runs `.github/workflows/ci.yml`: the
+same checks plus a build, then a Windows job that ships and starts `SparkCG.exe`.
 
 ### Running the shipped app
 

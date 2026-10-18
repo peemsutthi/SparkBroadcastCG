@@ -1,0 +1,58 @@
+# Every push and pull request: the checks, then a real SparkCG.exe started on
+# Windows to prove the shipped relay comes up. Branch protection on main
+# requires both jobs.
+name: ci
+
+on:
+  push:
+    branches: ['**'] # tags are release.yml's
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  windows-exe:
+    runs-on: windows-latest
+    needs: checks
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run ship
+      # The exe also runs `start` on a URL to open the browser; that is a
+      # fire-and-forget exec, so a runner with no browser neither blocks nor fails.
+      - name: Start SparkCG.exe and wait for /api/host
+        shell: pwsh
+        run: |
+          $exe = Start-Process -FilePath release/SparkCG/SparkCG.exe -PassThru -NoNewWindow
+          $deadline = (Get-Date).AddSeconds(30)
+          $answered = $false
+          while (-not $answered -and (Get-Date) -lt $deadline -and -not $exe.HasExited) {
+            try {
+              $res = Invoke-RestMethod -Uri http://localhost:4000/api/host -TimeoutSec 2
+              Write-Host "SparkCG.exe answered: host $($res.host)"
+              $answered = $true
+            } catch {
+              Start-Sleep -Seconds 1
+            }
+          }
+          if (-not $exe.HasExited) { Stop-Process -Id $exe.Id -Force }
+          if (-not $answered) {
+            Write-Error "SparkCG.exe never answered on http://localhost:4000/api/host within 30 s"
+            exit 1
+          }

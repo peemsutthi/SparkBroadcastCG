@@ -12,8 +12,7 @@ render surface for OBS, :5174). All tooling (TypeScript, ESLint, Vite, React) is
 | --- | --- |
 | Tests | `npm test` (the only test suite; spawns its own relay) |
 | Typecheck, lint | `npm run typecheck`, `npm run lint` — one root `tsconfig.json` / `eslint.config.js` covers control, cg and `shared/` |
-| Build | `npm run build` — typechecks, then Vite builds both apps into `app/` |
-| Ship | `npm run ship` — see *Shipping* |
+| Build, ship | `npm run build` — typechecks, then Vite builds both apps into `app/`; `npm run ship` — see *Shipping* |
 
 `server/check.js` is one plain-node script, no runner, no single-test mode: the relay protocol end
 to end (incl. `onAir` surviving a killed relay, on its own temp `STATE_FILE`), every hero in all
@@ -111,9 +110,10 @@ Empty `assets/teamlogo/` and `assets/fonts/` show the operator where to drop.
   Start opens the browser; a second double-click only does that. The console window is the
   operator's "running" sign and off switch: titled *SparkCG — RUNNING · close this window to
   stop*, with a plain-English banner, not dev logs.
-- A pushed `v*` tag runs `release.yml`: lint, test, ship on Ubuntu, then `SparkCG-windows.zip`
-  (the name README's download link promises) as a GitHub Release. No macOS build yet: needs darwin
-  node, `--macho-segment-name NODE_SEA`, `codesign --sign -`, `open` in place of `start`.
+- A pushed `v*` tag runs `release.yml` (lint, typecheck, test, ship on Ubuntu) and publishes
+  `SparkCG-windows.zip`, the name README's download link promises. Every push and PR runs
+  `ci.yml`: the checks, then `windows-exe` ships the exe, starts it and polls `/api/host`.
+- No macOS build yet: darwin node, `--macho-segment-name NODE_SEA`, `codesign --sign -`, `open` not `start`.
 
 ## Design language (control UI)
 
