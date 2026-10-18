@@ -28,29 +28,29 @@ control/ :5173 ──take/clear, output N──► server/ :4000 ──rebroadca
                                          to every new client            the path picks the output
 ```
 
-**The relay is the single source of truth for what is on air.** Control renders what comes back
-from the relay, not what it sent.
+**The relay is the single source of truth for what is on air.** Control renders what comes back.
 
 - OBS reloads a browser source on every scene change; it reconnects, gets the `sync`
   (`{ type: 'sync', onAir }`) and comes back with its graphics up. Anything held only in a
   component is lost on that reload, so state that must survive goes in the message.
 - `onAir` is keyed by **output and layer** (`"2/draft"`). A `take` replaces that layer on that
   output; a `clear` removes it. `cg/src/App.tsx` renders only what the relay says is up, plus a
-  just-cleared layer held on its last take while its out plays. Nothing may render there
-  unconditionally: anything unconditional goes to air.
+  just-cleared layer held on its last take while its out plays — never anything unconditional,
+  which would go to air.
 - `onAir` outlives the relay: every `take` and `clear` rewrites `show-state.json` in `ROOT` (temp
   file, then rename), loaded on start, so a crash or closed console window comes back with the
   same graphics up. Missing or unreadable: one log line, start empty. `STATE_FILE` overrides the
-  path; the file is gitignored.
+  path (gitignored).
 - Four outputs (`OUTPUTS` in `shared/draft.ts`), **one Vite app**: `cg/src/main.tsx` reads the
   output off the path (`/cg/3` → 3, `/` → 1); `useRelay` keeps that output's slice, re-keyed by
-  layer, so code below it reads `onAir['draft']`. Vite's SPA fallback serves `/cg/N`; a fifth
-  output is one entry in `OUTPUTS`. Control drives one output at a time (*Target Output Channel*)
-  while the relay holds the others untouched. Filtering is per render, not at the socket, so
-  retargeting never drops the connection.
+  layer, so code below it reads `onAir['draft']`. Vite's SPA fallback serves `/cg/N`. Control
+  drives one output at a time (*Target Output Channel*) while the relay holds the others; filtering
+  is per render, not at the socket, so retargeting never drops the connection.
 
 Protocol (types in `shared/draft.ts`). No `output` means output 1, so old browser-source URLs keep
-working. Anything but a take or a clear is dropped, not forwarded: every page reads it as a clear.
+working. Dropped, not stored or forwarded: anything but a take or clear (a page reads it as a
+clear), and one whose `output` is not 1–4, `layer`/`template` not a non-empty string or `data`
+not an object (stored, it would be replayed to every page on every reconnect).
 
 ```js
 { type: 'take',  output: 1, layer: 'draft', template: 'draft', data: { ...DraftState } }
@@ -62,9 +62,10 @@ working. Anything but a take or a clear is dropped, not forwarded: every page re
 Both apps import `shared/draft.ts` and `shared/relay.ts` as `../../shared/...`. That needs
 `server: { fs: { allow: ['..'] } }` in both `vite.config.ts` and `"shared"` in the root
 `tsconfig.json` — remove either and the dev server fails with an opaque error. `relay.ts`'s react
-import resolves from the root `node_modules` only because the apps are npm workspaces. `shared/`
-holds the wire types and `slot()`, the `output/layer` key; the server copies `slot` only because
-it is plain JS, and if the two disagree control's tally reads OFF AIR while a board is live. It
+import resolves from the root `node_modules` only because the apps are npm workspaces.
+`shared/` holds the wire types, `OUTPUTS` (a fifth output is one entry here) and `slot()`, the
+`output/layer` key. `server/src/index.js` copies `OUTPUTS` and `slot` only because it is plain JS:
+keep them in step — if the `slot`s disagree, control's tally reads OFF AIR on a live board. It
 also holds `DRAFT_SEQUENCE`, the 17-step pick/ban order (index = step, value = slot ids lit):
 control names the phase via `phaseLabel()`, cg pulses the same ids. **Both read the one array on
 purpose**: a copy would drift and light a different slot than the button names.
@@ -104,13 +105,12 @@ Empty `assets/teamlogo/` and `assets/fonts/` show the operator where to drop.
 - **Built, the relay serves all on :4000**: control `/`, cg `/cg/N` (sirv `single: true`),
   `/assets`, `/style`, `/api/*`; control's bundle dir `ui/` and cg's base `/cg/` keep clear of
   `/assets/`. Pages take the relay from `location.host`: OBS URL `http://<lan>:4000/cg/2`.
-- The exe is a Node single executable: `scripts/ship.mjs` bundles the relay with Vite into
-  `server/dist/relay.cjs`, injected into the official `node.exe` of the **same Node version**
-  running the build — which is why it builds from a Mac.
+- The exe is a Node SEA: `scripts/ship.mjs` bundles the relay (Vite) into `server/dist/relay.cjs`,
+  injected into the official `node.exe` of the **same Node version** as the build, so a Mac can.
 - In the exe `ROOT` is its own folder (`sea.isSea()`), so `style/` and `assets/` stay editable.
-  Start opens the browser; a second double-click only does that. The console window, titled
-  *SparkCG — RUNNING · close this window to stop*, prints a plain-English banner, not dev logs:
-  it is the operator's "running" sign and off switch.
+  Start opens the browser; a second double-click only does that. The console window is the
+  operator's "running" sign and off switch: titled *SparkCG — RUNNING · close this window to
+  stop*, with a plain-English banner, not dev logs.
 - A pushed `v*` tag runs `release.yml`: lint, test, ship on Ubuntu, then `SparkCG-windows.zip`
   (the name README's download link promises) as a GitHub Release. No macOS build yet: needs darwin
   node, `--macho-segment-name NODE_SEA`, `codesign --sign -`, `open` in place of `start`.

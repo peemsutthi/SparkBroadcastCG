@@ -150,6 +150,18 @@ const onAir = restore()
 
 const slot = (msg) => `${msg.output ?? 1}/${msg.layer}`
 
+// A copy of OUTPUTS in shared/draft.ts, like slot: plain JS cannot import .ts.
+const OUTPUTS = [1, 2, 3, 4]
+const name = (v) => typeof v === 'string' && v !== ''
+const object = (v) => typeof v === 'object' && v !== null && !Array.isArray(v)
+
+// A take or clear with a bad field would be stored, saved and replayed to every
+// page on every reconnect — a page that renders it can break that output's air.
+const valid = (msg) =>
+  (msg.output === undefined || OUTPUTS.includes(msg.output)) &&
+  name(msg.layer) &&
+  (msg.type === 'clear' || (name(msg.template) && object(msg.data)))
+
 const send = (sock, msg) => sock.send(JSON.stringify(msg))
 
 wss.on('connection', (sock) => {
@@ -165,6 +177,7 @@ wss.on('connection', (sock) => {
     // Nor valid JSON that is not a take or clear (`null` throws on .type), and
     // it is not forwarded either: every page would read it as a clear.
     if (msg?.type !== 'take' && msg?.type !== 'clear') return
+    if (!valid(msg)) return
 
     if (msg.type === 'take') onAir[slot(msg)] = msg
     else delete onAir[slot(msg)]

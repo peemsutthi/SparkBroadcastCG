@@ -91,6 +91,39 @@ assert.equal((await stillAlive).type, 'clear')
 const late = await connect()
 assert.deepEqual((await next(late)).onAir, {})
 
+// A take or clear with a bad field is dropped: not stored, not saved, not
+// forwarded. The relay stays up, and the next good message is the next one a
+// page receives.
+const good = { type: 'take', layer: 'draft', template: 'draft', data: {} }
+const bad = [
+  { ...good, layer: undefined },
+  { ...good, layer: '' },
+  { ...good, layer: 7 },
+  { ...good, template: undefined },
+  { ...good, template: '' },
+  { ...good, data: undefined },
+  { ...good, data: null },
+  { ...good, data: 'board' },
+  { ...good, data: [] },
+  { type: 'clear' },
+  { type: 'clear', layer: '' },
+  { type: 'clear', layer: ['draft'] },
+  ...[0, 5, 1.5, '2', null].flatMap((output) => [
+    { ...good, output },
+    { type: 'clear', output, layer: 'draft' },
+  ]),
+]
+const afterBad = next(cg)
+for (const msg of bad) control.send(JSON.stringify(msg))
+control.send(JSON.stringify(good))
+assert.deepEqual(await afterBad, good)
+
+const clean = await connect()
+assert.deepEqual((await next(clean)).onAir, { '1/draft': good })
+const cleared = next(cg)
+control.send(JSON.stringify({ type: 'clear', layer: 'draft' }))
+await cleared
+
 // Outputs hold separate state. A take addressed to output 2 must not reach
 // /cg/1, and clearing output 1 must leave output 2 up — four browser sources
 // share this one relay, and a leak between them is a wrong graphic on air.
