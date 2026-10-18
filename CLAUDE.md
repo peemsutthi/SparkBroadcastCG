@@ -259,9 +259,3 @@ its old board over the live one. A clear carries no `from`, so another tab's
 
 The cost: anything not yet sent to air — a pick typed but not pushed with
 *Next phase* or *Sync* — is replaced at those moments by what is on air.
-
-## `legacy/`
-
-`control.html` and `output.html` are the original single-file socket.io
-prototype, kept as reference. The draft step engine and overlay were ported from
-them. Not built, not served, not imported.

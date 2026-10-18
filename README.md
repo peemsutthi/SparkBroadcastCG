@@ -166,7 +166,6 @@ SparkBroadcastCG/
 ├── server/          # WebSocket relay + asset/API server, :4000
 ├── shared/          # Code both pages use: pick/ban order, message types, relay hook
 ├── scripts/         # ship.mjs — builds the Windows release
-├── legacy/          # Original single-file prototype (control.html, output.html) for reference only
 ├── app/             # (generated) built control + cg, served by the relay — npm run build
 ├── release/         # (generated) the Windows folder — npm run ship
 ├── package.json     # All dependencies and scripts

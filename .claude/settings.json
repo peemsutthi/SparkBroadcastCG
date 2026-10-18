@@ -24,7 +24,6 @@
       "Bash(git clean *)",
       "Bash(npm publish *)",
       "Edit(**/show-state.json*)",
-      "Edit(**/legacy/**)",
       "Edit(**/node_modules/**)",
       "Edit(**/package-lock.json)",
       "Edit(**/app/**)",
