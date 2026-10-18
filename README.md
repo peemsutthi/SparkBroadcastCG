@@ -1,10 +1,14 @@
-# SparkBroadcastCG RoV BroadcastCG overlays
+# SparkBroadcastCG — ban/pick CG overlays for RoV broadcasts
 
 Thanks to @LoongPaan for the codes, ideas and for the amazing support! <3
 
 Live-stream CG overlays for the ban/pick phase of Arena of Valor / RoV broadcasts.
 
 The operator drives the ban/pick sequence from a control page in the browser. The output pages render 1920×1080 transparent overlays that OBS or vMix use as Browser Sources.
+
+![Ban/pick board](docs/board.png)
+
+Architecture, protocol and the rules behind them: [CLAUDE.md](CLAUDE.md).
 
 ## Download (Windows, no install)
 
@@ -86,46 +90,6 @@ ships and attaches `SparkCG-windows.zip` to a GitHub Release of that tag.
   `assets/fonts` — no restart.
 - The console window says *SparkCG is running*; close it to stop.
 
-## Protocol
-
-The Control page sends commands to the server, which stores and broadcasts the current state to all connected clients.
-
-### Take a CG
-
-```sh
-{
-  type: 'take',
-  output: 1,
-  layer: 'draft',
-  template: 'draft',
-  data: { ...DraftState }
-}
-```
-
-### Clear a CG
-
-```sh
-{
-  type: 'clear',
-  output: 1,
-  layer: 'draft'
-}
-```
-
-`output` picks which of the 4 CG outputs the command targets and defaults to
-1 when omitted, so a browser source left on an old URL keeps working.
-
-When a client connects, the server immediately sends:
-
-```sh
-{
-  type: 'sync',
-  onAir: ...
-}
-```
-
-This allows a CG browser source to reload or reconnect and automatically recover the current on-air graphics.
-
 ## Assets
 
 All game and broadcast assets are stored in the root `assets/` directory.
@@ -154,21 +118,3 @@ http://localhost:5174/cg/1      # npm run dev
 If OBS runs on a different machine than the relay, use control's Setup tab
 to get the right URL for each output instead of typing `localhost` — a
 browser can't know its own LAN address.
-
-## Project Structure
-
-```text
-SparkBroadcastCG/
-├── assets/          # Game and broadcast assets (ban/, globalban/, heropick/, teamlogo/, overlayhud/, fonts/)
-├── style/           # CG stylesheets, served as-is — edit and reload, no rebuild
-├── control/         # Control panel (Vite + React), :5173
-├── cg/              # Broadcast CG render surface (Vite + React), :5174
-├── server/          # WebSocket relay + asset/API server, :4000
-├── shared/          # Code both pages use: pick/ban order, message types, relay hook
-├── scripts/         # ship.mjs — builds the Windows release
-├── app/             # (generated) built control + cg, served by the relay — npm run build
-├── release/         # (generated) the Windows folder — npm run ship
-├── package.json     # All dependencies and scripts
-├── tsconfig.json    # One typecheck for control, cg and shared/
-└── eslint.config.js # One lint for control, cg and shared/
-```
